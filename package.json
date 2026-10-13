@@ -1,0 +1,33 @@
+{
+  "name": "jotline",
+  "version": "1.0.0",
+  "description": "Stream-based quick capture and card organizer for Obsidian.",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "BUILD_ENV=production node esbuild.config.mjs",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "obsidian",
+    "obsidian-plugin",
+    "quick-capture",
+    "notes"
+  ],
+  "author": "sasaki",
+  "license": "MIT",
+  "devDependencies": {
+    "@codemirror/language": "^6.10.8",
+    "@codemirror/state": "^6.5.2",
+    "@codemirror/view": "^6.36.4",
+    "@types/node": "^20.17.10",
+    "builtin-modules": "^4.0.0",
+    "esbuild": "^0.24.0",
+    "esbuild-svelte": "^0.8.2",
+    "obsidian": "^1.7.2",
+    "svelte": "^4.2.19",
+    "svelte-preprocess": "^5.1.4",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  }
+}

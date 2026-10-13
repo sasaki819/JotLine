@@ -1,0 +1,437 @@
+<script lang="ts">
+	/**
+	 * タイムライン上の単一メモカードを描画・操作するコンポーネント。
+	 * 
+	 * 【主な機能】:
+	 * 1. Obsidian公式の `MarkdownRenderer.render` によるリッチMarkdownプレビュー（数式・内部リンク・画像対応）。
+	 * 2. ダブルクリックまたは「✏️」ボタンによるインライン編集モードへの移行。
+	 * 3. インライン編集中の `[[` 内部リンクサジェスト（LinkSuggest）対応。
+	 * 4. カーソル位置でのカード分割（`✂️ Split`）および上位カードとの可逆結合（`⬆️`）。
+	 * 5. 既存カードに対する返信スレッドの作成（`💬`）。
+	 * 6. 単体Markdownコピー（`📋`）および削除（`🗑️`）。
+	 * 7. ドラッグハンドル（`⠿`）によるHTML5 Drag & Drop並び替え。
+	 * 8. 単一・複数選択ハイライト（`.is-selected`）と右クリックメニューイベント通知。
+	 */
+	import { onMount, onDestroy } from "svelte";
+	import { App, Component, MarkdownRenderer, Notice } from "obsidian";
+	import type { JotCard } from "../types";
+	import type { JotStore } from "../store";
+	import LinkSuggest from "./LinkSuggest.svelte";
+
+	/** 表示対象のカードデータ */
+	export let card: JotCard;
+	/** カードが属する親グループのID */
+	export let groupId: string;
+	export let store: JotStore;
+	export let app: App;
+	/** 上位カードと結合（Merge Up）可能かどうかのフラグ（ドキュメント最上位のカード以外はtrue） */
+	export let canMergeUp = false;
+	/** 複数選択状態かどうか */
+	export let isSelected = false;
+	/** カードクリック時の選択イベント通知コールバック */
+	export let onSelectCard: (cardId: string, event: MouseEvent) => void = () => {};
+	/** カード右クリック時のコンテキストメニュー表示通知コールバック */
+	export let onContextMenuCard: (cardId: string, event: MouseEvent) => void = () => {};
+
+	/** インライン編集モード中フラグ */
+	let isEditing = false;
+	/** 編集中のテキスト */
+	let editContent = card.content;
+	/** 返信入力欄の展開フラグ */
+	let isReplying = false;
+	/** 返信メッセージテキスト */
+	let replyText = "";
+
+	/** MarkdownRenderer が描画するコンテナ要素 */
+	let markdownContainer: HTMLElement;
+	/** MarkdownRenderer のライフサイクル管理用 Obsidian Component */
+	let obsidianComponent: Component;
+
+	// インライン編集時の [[ サジェスト関連ステート
+	let linkSuggestComponent: LinkSuggest;
+	let isSuggestOpen = false;
+	let suggestQuery = "";
+	let suggestStartPos = 0;
+	let editTextareaEl: HTMLTextAreaElement;
+
+	/**
+	 * 編集欄のカーソル直前テキストを解析し、`[[` 内部リンク入力中かを判定
+	 */
+	function checkSuggest(el: HTMLTextAreaElement) {
+		const cursor = el.selectionStart;
+		const textBefore = editContent.slice(0, cursor);
+		const match = textBefore.match(/\[\[([^\]\r\n]*)$/);
+		if (match) {
+			suggestQuery = match[1];
+			suggestStartPos = match.index!;
+			isSuggestOpen = true;
+		} else {
+			isSuggestOpen = false;
+		}
+	}
+
+	/**
+	 * サジェストから選択されたノートリンクを編集欄に挿入
+	 */
+	function handleSelectLink(name: string) {
+		if (!editTextareaEl) return;
+		const cursor = editTextareaEl.selectionStart;
+		const before = editContent.slice(0, suggestStartPos);
+		const after = editContent.slice(cursor);
+		const inserted = `[[${name}]]`;
+		editContent = before + inserted + after;
+		isSuggestOpen = false;
+		const newPos = before.length + inserted.length;
+		setTimeout(() => {
+			editTextareaEl.selectionStart = editTextareaEl.selectionEnd = newPos;
+			editTextareaEl.focus();
+		}, 0);
+	}
+
+	/**
+	 * Obsidian の MarkdownRenderer を用いてカード本文をリッチHTMLとして描画します。
+	 */
+	function renderMarkdown() {
+		if (!markdownContainer) return;
+		markdownContainer.empty();
+		if (!obsidianComponent) {
+			obsidianComponent = new Component();
+			obsidianComponent.load();
+		}
+		MarkdownRenderer.render(
+			app,
+			card.content,
+			markdownContainer,
+			store.file.path,
+			obsidianComponent
+		);
+	}
+
+	onMount(() => {
+		renderMarkdown();
+	});
+
+	onDestroy(() => {
+		// メモリリーク防止のため MarkdownRenderer のコンポーネントを安全にアンロード
+		if (obsidianComponent) {
+			obsidianComponent.unload();
+		}
+	});
+
+	// カード本文が外部またはストアで更新された際にMarkdownを再描画
+	$: if (!isEditing && markdownContainer && card.content) {
+		renderMarkdown();
+	}
+
+	/** 編集モードの開始 */
+	function startEdit() {
+		editContent = card.content;
+		isEditing = true;
+	}
+
+	/** 編集内容の保存 */
+	async function saveEdit() {
+		if (editContent.trim()) {
+			await store.updateCard(card.id, editContent);
+		}
+		isEditing = false;
+	}
+
+	/** 編集のキャンセル */
+	function cancelEdit() {
+		editContent = card.content;
+		isEditing = false;
+	}
+
+	/** スレッド返信の送信 */
+	async function handleReply() {
+		if (!replyText.trim()) return;
+		await store.replyToCard(card.id, replyText);
+		replyText = "";
+		isReplying = false;
+	}
+
+	/** カード本文の単体クリップボードコピー */
+	async function handleCopy() {
+		await navigator.clipboard.writeText(card.content);
+		new Notice("Card copied to clipboard");
+	}
+
+	/** カードの削除 */
+	async function handleDelete() {
+		await store.deleteCard(card.id);
+	}
+
+	/** 一つ上のカードと結合（Merge Up） */
+	async function handleMergeUp() {
+		await store.mergeWithPreviousCard(card.id);
+	}
+
+	/**
+	 * 編集モード中、カーソル位置でカードを2分割（Split）します。
+	 */
+	async function handleSplit(textarea: HTMLTextAreaElement) {
+		const selStart = textarea.selectionStart;
+		if (selStart > 0 && selStart < editContent.length) {
+			const before = editContent.substring(0, selStart);
+			const after = editContent.substring(selStart);
+			await store.splitCard(card.id, before, after);
+			isEditing = false;
+			new Notice("Card split into two");
+		} else {
+			new Notice("Place cursor inside text to split");
+		}
+	}
+
+	/**
+	 * HTML5 Drag & Drop 開始処理。カードIDと所属グループIDをJSONデータとして転送設定します。
+	 */
+	function handleDragStart(e: DragEvent) {
+		if (e.dataTransfer) {
+			e.dataTransfer.setData("application/json", JSON.stringify({
+				cardId: card.id,
+				sourceGroupId: groupId,
+			}));
+			e.dataTransfer.effectAllowed = "move";
+		}
+	}
+</script>
+
+<!-- svelte-ignore a11y-no-static-element-interactions -->
+<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+<!-- svelte-ignore a11y-click-events-have-key-events -->
+<div
+	class="jotline-card {isSelected ? 'is-selected' : ''}"
+	role="article"
+	aria-label="Note card"
+	draggable="true"
+	on:dragstart={handleDragStart}
+	on:click={(e) => onSelectCard(card.id, e)}
+	on:contextmenu={(e) => onContextMenuCard(card.id, e)}
+>
+	<div class="jotline-card-header">
+		<span class="jotline-drag-handle" title="Drag to reorder">⠿</span>
+		<div class="jotline-card-actions">
+			{#if canMergeUp}
+				<button
+					class="clickable-icon"
+					title="一つ上のカードと統合 (Merge with card above)"
+					on:click={handleMergeUp}
+				>
+					⬆️
+				</button>
+			{/if}
+			<button class="clickable-icon" title="Reply / Thread" on:click={() => (isReplying = !isReplying)}>
+				💬
+			</button>
+			<button class="clickable-icon" title="Edit" on:click={startEdit}>
+				✏️
+			</button>
+			<button class="clickable-icon" title="Copy Markdown" on:click={handleCopy}>
+				📋
+			</button>
+			<button class="clickable-icon" title="Delete" on:click={handleDelete}>
+				🗑️
+			</button>
+		</div>
+	</div>
+
+	{#if isEditing}
+		<div class="jotline-edit-container">
+			<LinkSuggest
+				bind:this={linkSuggestComponent}
+				{app}
+				query={suggestQuery}
+				isOpen={isSuggestOpen}
+				onSelect={handleSelectLink}
+			/>
+			<textarea
+				bind:this={editTextareaEl}
+				bind:value={editContent}
+				rows="4"
+				class="jotline-edit-textarea"
+				on:input={(e) => checkSuggest(e.currentTarget)}
+				on:keydown={(e) => {
+					if (isSuggestOpen && linkSuggestComponent && linkSuggestComponent.hasSuggestions()) {
+						if (e.key === "ArrowDown") {
+							e.preventDefault();
+							linkSuggestComponent.moveSelection(1);
+							return;
+						}
+						if (e.key === "ArrowUp") {
+							e.preventDefault();
+							linkSuggestComponent.moveSelection(-1);
+							return;
+						}
+						if (e.key === "Enter" || e.key === "Tab") {
+							e.preventDefault();
+							if (linkSuggestComponent.selectCurrent()) return;
+						}
+						if (e.key === "Escape") {
+							e.preventDefault();
+							isSuggestOpen = false;
+							return;
+						}
+					}
+					if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+						e.preventDefault();
+						saveEdit();
+					} else if (e.key === "Escape") {
+						cancelEdit();
+					}
+				}}
+			></textarea>
+			<div class="jotline-edit-actions">
+				<button class="mod-cta" on:click={saveEdit}>Save</button>
+				<button on:click={cancelEdit}>Cancel</button>
+				<button
+					class="jotline-btn-split"
+					title="Split card at cursor position"
+					on:click={() => {
+						if (editTextareaEl) handleSplit(editTextareaEl);
+					}}
+				>
+					✂️ Split
+				</button>
+			</div>
+		</div>
+	{:else}
+		<!-- svelte-ignore a11y-no-static-element-interactions -->
+		<div
+			class="jotline-card-content markdown-rendered"
+			bind:this={markdownContainer}
+			on:dblclick={startEdit}
+		></div>
+	{/if}
+
+	{#if isReplying}
+		<div class="jotline-reply-container">
+			<input
+				type="text"
+				placeholder="Reply to this card..."
+				bind:value={replyText}
+				class="jotline-reply-input"
+				on:keydown={(e) => {
+					if (e.key === "Enter") {
+						e.preventDefault();
+						handleReply();
+					} else if (e.key === "Escape") {
+						isReplying = false;
+					}
+				}}
+			/>
+			<button class="mod-cta" on:click={handleReply}>Reply</button>
+			<button on:click={() => (isReplying = false)}>Cancel</button>
+		</div>
+	{/if}
+</div>
+
+<style>
+	.jotline-card {
+		background-color: var(--background-primary-alt);
+		border: 1px solid var(--background-modifier-border);
+		border-radius: 8px;
+		padding: 10px 12px;
+		margin-bottom: 8px;
+		position: relative;
+		transition: border-color 0.15s ease, box-shadow 0.15s ease;
+	}
+
+	.jotline-card:hover {
+		border-color: var(--interactive-accent);
+	}
+
+	.jotline-card.is-selected {
+		border-color: var(--interactive-accent);
+		background-color: var(--background-modifier-hover);
+		box-shadow: 0 0 0 2px var(--interactive-accent);
+	}
+
+	.jotline-card-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 6px;
+		opacity: 0.6;
+		transition: opacity 0.15s ease;
+	}
+
+	.jotline-card:hover .jotline-card-header {
+		opacity: 1;
+	}
+
+	.jotline-drag-handle {
+		cursor: grab;
+		user-select: none;
+		font-size: 14px;
+		color: var(--text-muted);
+	}
+
+	.jotline-card-actions {
+		display: flex;
+		gap: 4px;
+	}
+
+	.clickable-icon {
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 2px 4px;
+		font-size: 12px;
+		border-radius: 4px;
+		color: var(--text-muted);
+	}
+
+	.clickable-icon:hover {
+		background-color: var(--background-modifier-hover);
+		color: var(--text-normal);
+	}
+
+	.jotline-card-content {
+		line-height: 1.5;
+		word-break: break-word;
+		font-size: var(--font-text-size);
+	}
+
+	.jotline-edit-container {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+
+	.jotline-edit-textarea {
+		width: 100%;
+		resize: vertical;
+		background: var(--background-primary);
+		color: var(--text-normal);
+		border: 1px solid var(--interactive-accent);
+		border-radius: 4px;
+		padding: 6px;
+		font-family: inherit;
+		font-size: inherit;
+	}
+
+	.jotline-edit-actions {
+		display: flex;
+		gap: 6px;
+		justify-content: flex-end;
+	}
+
+	.jotline-reply-container {
+		margin-top: 8px;
+		padding-top: 8px;
+		border-top: 1px dashed var(--background-modifier-border);
+		display: flex;
+		gap: 6px;
+	}
+
+	.jotline-reply-input {
+		flex: 1;
+		background: var(--background-primary);
+		border: 1px solid var(--background-modifier-border);
+		border-radius: 4px;
+		padding: 4px 8px;
+		color: var(--text-normal);
+	}
+</style>

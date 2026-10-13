@@ -1,0 +1,350 @@
+<script lang="ts">
+	/**
+	 * @file GroupView.svelte
+	 * @description JotLineのカードグループ（スレッド）表示コンポーネント。
+	 * 
+	 * 【主な役割・機能】
+	 * 1. スレッドヘッダー表示:
+	 *    - 名前付きグループの場合、スレッドタイトル「🧵 グループ名 (カード枚数)」を表示。
+	 *    - スレッド名のインライン編集（ダブルクリックまたは編集ボタン）。
+	 *    - グループ単位のアクション（グループ解除/解散、Markdownとしてクリップボードへコピー）。
+	 * 2. カードのコンテナ表示:
+	 *    - 所属するカード一覧（CardView）を垂直に配置。
+	 *    - 最上位カードかどうかの判定（canMergeUpプロパティの制御）。
+	 * 3. ドラッグ＆ドロップ (D&D) 受付:
+	 *    - グループコンテナ全体またはカード間ドロップ領域でカードの移動・並べ替えを受け付け。
+	 * 4. 複数選択状態とイベントの中継:
+	 *    - 親コンポーネント（App.svelte）から渡された選択状態やイベントハンドラをCardViewへ中継。
+	 */
+	import { Notice, type App } from "obsidian";
+	import type { JotGroup } from "../types";
+	import type { JotStore } from "../store";
+	import { icon } from "../utils/icon";
+	import CardView from "./CardView.svelte";
+
+	/** 表示対象のグループデータ */
+	export let group: JotGroup;
+	/** データ操作用ストア */
+	export let store: JotStore;
+	/** Obsidian Appインスタンス */
+	export let app: App;
+	/** ドキュメント全体で最初のグループかどうか（先頭カードのMerge Up可否判定に使用） */
+	export let isFirstGroup = false;
+	/** 現在選択中のカードIDセット（複数選択ハイライト用） */
+	export let selectedCardIds: Set<string> = new Set();
+	/** カードクリック（選択・範囲選択）時のコールバック関数 */
+	export let onSelectCard: (cardId: string, event: MouseEvent) => void = () => {};
+	/** カード右クリック（コンテキストメニュー表示）時のコールバック関数 */
+	export let onContextMenuCard: (cardId: string, event: MouseEvent) => void = () => {};
+
+	/** ドラッグオーバー中かどうかのフラグ（枠線ハイライト用） */
+	let isDragOver = false;
+	/** グループ名変更中かどうかのフラグ */
+	let isRenaming = false;
+	/** 変更中のグループ名入力バッファ */
+	let editingName = group.name;
+
+	// グループ名が外部から変更された場合（編集モード中でなければ）バッファを同期
+	$: if (!isRenaming) {
+		editingName = group.name;
+	}
+
+	/**
+	 * グループ名変更モードを開始する
+	 */
+	function startRename() {
+		editingName = group.name;
+		isRenaming = true;
+	}
+
+	/**
+	 * 変更したグループ名を保存する
+	 */
+	async function saveRename() {
+		const newName = editingName.trim();
+		if (newName && newName !== group.name) {
+			await store.renameGroup(group.id, newName);
+		}
+		isRenaming = false;
+	}
+
+	/**
+	 * グループ名変更をキャンセルし、元の名前に戻す
+	 */
+	function cancelRename() {
+		editingName = group.name;
+		isRenaming = false;
+	}
+
+	/**
+	 * グループを解散（グループ化解除）する
+	 * 所属する全カードをデフォルトグループ（未分類）に戻します。
+	 */
+	async function handleDissolveGroup() {
+		const cardIds = group.cards.map((c) => c.id);
+		await store.ungroupSelectedCards(cardIds);
+	}
+
+	/**
+	 * グループ全体のカード内容をMarkdown形式でクリップボードにコピーする
+	 */
+	async function handleCopyGroup() {
+		const md = store.exportGroup(group.id);
+		await navigator.clipboard.writeText(md);
+		new Notice(`Group "${group.name || "Default"}" copied as Markdown`);
+	}
+
+	/**
+	 * ドラッグオーバー時のハンドラ
+	 * 他のカードがこのグループ上にドラッグされた際にドロップ可能であることを示します。
+	 */
+	function handleDragOver(e: DragEvent) {
+		e.preventDefault();
+		if (e.dataTransfer) {
+			e.dataTransfer.dropEffect = "move";
+		}
+		isDragOver = true;
+	}
+
+	/**
+	 * ドラッグ領域から離れた時のハンドラ
+	 */
+	function handleDragLeave() {
+		isDragOver = false;
+	}
+
+	/**
+	 * ドロップ時のハンドラ
+	 * ドラッグされたカードをこのグループの特定位置（または末尾）へ移動・挿入します。
+	 * 
+	 * @param e ドラッグイベント
+	 * @param targetIndex 挿入先インデックス（省略時は末尾）
+	 */
+	async function handleDrop(e: DragEvent, targetIndex?: number) {
+		e.preventDefault();
+		isDragOver = false;
+
+		const rawData = e.dataTransfer?.getData("application/json");
+		if (!rawData) return;
+
+		try {
+			const data = JSON.parse(rawData);
+			const cardId = data.cardId;
+			// targetIndexが指定されていればその位置、なければグループ末尾に挿入
+			const index = targetIndex !== undefined ? targetIndex : group.cards.length;
+			await store.reorderCard(cardId, group.id, index);
+		} catch (err) {
+			console.error("Failed to parse dropped card data", err);
+		}
+	}
+</script>
+
+<!-- グループ全体のコンテナ（名前付きスレッドまたはデフォルトグループ） -->
+<div
+	class="jotline-group {group.name ? 'is-thread' : 'is-default'} {isDragOver ? 'is-dragover' : ''}"
+	on:dragover={handleDragOver}
+	on:dragleave={handleDragLeave}
+	on:drop={(e) => handleDrop(e)}
+	role="region"
+	aria-label={group.name ? `Thread: ${group.name}` : "Unclassified Notes"}
+>
+	{#if group.name}
+		<!-- スレッドヘッダー（名前付きグループのみ表示） -->
+		<div class="jotline-group-header">
+			<div class="jotline-group-title">
+				<span class="jotline-thread-icon">🧵</span>
+				{#if isRenaming}
+					<!-- スレッド名のインライン編集入力ボックス -->
+					<div class="jotline-rename-box">
+						<input
+							type="text"
+							class="jotline-rename-input"
+							bind:value={editingName}
+							on:keydown={(e) => {
+								if (e.key === "Enter") saveRename();
+								else if (e.key === "Escape") cancelRename();
+							}}
+						/>
+						<button class="clickable-icon" title="Save" on:click={saveRename}>✓</button>
+						<button class="clickable-icon" title="Cancel" on:click={cancelRename}>✕</button>
+					</div>
+				{:else}
+					<!-- スレッド名ラベル（ダブルクリックまたは編集ボタンで変更可能） -->
+					<!-- svelte-ignore a11y-no-static-element-interactions -->
+					<span
+						class="jotline-thread-name clickable"
+						title="ダブルクリックで名前変更"
+						on:dblclick={startRename}
+					>
+						{group.name}
+					</span>
+					<button class="clickable-icon" title="グループ名を変更" on:click={startRename}>
+						✏️
+					</button>
+					<span class="jotline-card-count">({group.cards.length})</span>
+				{/if}
+			</div>
+			<!-- グループ操作ボタン群（解散、Markdownコピー） -->
+			<div class="jotline-group-actions">
+				<button
+					class="clickable-icon"
+					aria-label="グループ化解除（解散して未分類に戻す）"
+					title="グループ化解除（解散して未分類に戻す）"
+					use:icon={"folder-minus"}
+					on:click={handleDissolveGroup}
+				></button>
+				<button
+					class="clickable-icon"
+					aria-label="スレッドをMarkdownとしてコピー"
+					title="スレッドをMarkdownとしてコピー"
+					use:icon={"copy"}
+					on:click={handleCopyGroup}
+				></button>
+			</div>
+		</div>
+	{/if}
+
+	<!-- グループ所属カード一覧コンテナ -->
+	<div class="jotline-group-cards">
+		{#each group.cards as card, index (card.id)}
+			<!-- 各カードのドロップ領域ラッパー（カード間の並べ替えを受け付け） -->
+			<div
+				class="jotline-card-wrapper"
+				on:dragover={(e) => {
+					e.stopPropagation();
+					handleDragOver(e);
+				}}
+				on:drop={(e) => {
+					e.stopPropagation();
+					handleDrop(e, index);
+				}}
+				role="listitem"
+			>
+				<CardView
+					{card}
+					groupId={group.id}
+					{store}
+					{app}
+					canMergeUp={!(isFirstGroup && index === 0)}
+					isSelected={selectedCardIds.has(card.id)}
+					{onSelectCard}
+					{onContextMenuCard}
+				/>
+			</div>
+		{/each}
+
+		{#if group.cards.length === 0}
+			<!-- カードが0枚の時の空状態プレースホルダー -->
+			<div class="jotline-empty-group">
+				Drop cards here to add to this group
+			</div>
+		{/if}
+	</div>
+</div>
+
+<style>
+	.jotline-group {
+		margin-bottom: 16px;
+		border-radius: 8px;
+		transition: background-color 0.15s ease, border-color 0.15s ease;
+	}
+
+	.jotline-group.is-thread {
+		border: 1px solid var(--background-modifier-border);
+		background-color: var(--background-secondary-alt);
+		padding: 8px 10px;
+	}
+
+	.jotline-group.is-dragover {
+		border-color: var(--interactive-accent);
+		background-color: var(--background-modifier-hover);
+	}
+
+	.jotline-group-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding-bottom: 6px;
+		margin-bottom: 8px;
+		border-bottom: 1px solid var(--background-modifier-border);
+	}
+
+	.jotline-group-title {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 0.85em;
+		font-weight: 600;
+		color: var(--text-muted);
+	}
+
+	.jotline-thread-name {
+		color: var(--text-normal);
+	}
+
+	.jotline-thread-name.clickable {
+		cursor: pointer;
+		padding: 2px 4px;
+		border-radius: 4px;
+		transition: background-color 0.15s ease;
+	}
+
+	.jotline-thread-name.clickable:hover {
+		background-color: var(--background-modifier-hover);
+	}
+
+	.jotline-rename-box {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+	}
+
+	.jotline-rename-input {
+		background: var(--background-primary);
+		color: var(--text-normal);
+		border: 1px solid var(--interactive-accent);
+		border-radius: 4px;
+		padding: 2px 6px;
+		font-size: 0.9em;
+		font-family: inherit;
+		min-width: 140px;
+	}
+
+	.jotline-card-count {
+		font-size: 0.8em;
+		color: var(--text-faint);
+	}
+
+	.clickable-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		background: none;
+		border: none;
+		cursor: pointer;
+		font-size: 11px;
+		padding: 4px;
+		border-radius: var(--radius-s, 4px);
+		color: var(--text-muted);
+		transition: background-color 0.15s ease, color 0.15s ease;
+	}
+
+	.clickable-icon:hover {
+		background-color: var(--background-modifier-hover);
+		color: var(--text-normal);
+	}
+
+	.jotline-group-cards {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.jotline-empty-group {
+		padding: 12px;
+		text-align: center;
+		color: var(--text-faint);
+		font-size: 0.85em;
+		border: 1px dashed var(--background-modifier-border);
+		border-radius: 6px;
+	}
+</style>
