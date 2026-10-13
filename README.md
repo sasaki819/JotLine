@@ -65,18 +65,58 @@ Follow-up thought in this thread
 
 ---
 
-## 🚀 Installation
+## 🚀 インストール・利用方法 (Installation)
 
-### Option 1: Manual Installation (Development / Local)
-1. Download or clone this repository.
-2. Run `npm install` and `npm run build`.
-3. Copy or symlink `main.js`, `manifest.json`, and `styles.css` into your vault's plugin directory:
-   `<Vault>/.obsidian/plugins/jotline/`
-4. Reload Obsidian and enable **JotLine** in Settings → Community Plugins.
+### 📌 最も簡単な導入方法（ビルド不要・ファイルを置くだけ）
 
-### Option 2: Via BRAT
-1. Install the [BRAT](https://github.com/TfTHacker/obsidian42-brat) plugin.
-2. Add this repository URL to BRAT to test beta releases.
+Node.jsやnpmを使ったビルドは**不要**です。生成済みの **`main.js`** と **`manifest.json`** の2つのファイルをObsidianの保管庫に配置するだけで、すぐに利用できます。
+
+#### 1. 必要なファイル
+本リポジトリ直下にある以下の **2つのファイル** を使用します：
+- `main.js`（プラグインのプログラム本体）
+- `manifest.json`（プラグインの定義ファイル）
+
+#### 2. ファイルの配置先
+お使いのObsidian保管庫（Vault）内のプラグインフォルダに、`jotline` という名前のフォルダを作成して配置します。
+
+```text
+あなたの保管庫 (Vault)/
+  └─ .obsidian/
+      └─ plugins/
+          └─ jotline/           ← このフォルダを作成
+              ├─ main.js        ← コピーして配置
+              └─ manifest.json  ← コピーして配置
+```
+
+> [!TIP]
+> - `.obsidian` フォルダは隠しフォルダです。Macの場合は `Cmd + Shift + .`、Windowsの場合はエクスプローラーの「表示」タブで「隠しファイル」にチェックを入れると表示されます。
+> - CSSスタイルは `main.js` 内に統合されているため、`styles.css` は不要です。
+
+#### 3. Obsidianでの有効化
+1. Obsidianを開きます（起動中の場合は再起動またはリロード）。
+2. 左下の歯車アイコン（設定）を開き、**「コミュニティプラグイン」** を選択します。
+3. 「インストール済みプラグイン」の横にある **更新アイコン（🔄）** をクリックします。
+4. 一覧に **「JotLine」** が表示されるので、右側のスイッチをオンにして **有効化** します。
+5. 初回有効化時、Vault直下に自動的に `_jotline.md`（メモ用ファイル）と `_jotline.readme.md`（仕様説明書）が自動生成されます。
+6. 左側のリボンアイコン（💬）をクリックするか、コマンドパレット（`Ctrl/Cmd + P`）から `JotLine: Open JotLine scratchpad` を実行すると起動します！
+
+---
+
+### 🛠️ ソースコードからビルドして導入する場合 (Build from Source)
+
+ソースコードを変更・開発したい場合の手順です（Windows / Mac / Linux 対応）：
+
+```bash
+# 依存パッケージのインストール
+npm install
+
+# 本番用ビルド（main.js を生成）
+npm run build
+
+# テスト実行
+npm test
+```
+ビルド後に生成された `main.js` と `manifest.json` を上記と同じ手順で配置（またはシンボリックリンク）してください。
 
 ---
 

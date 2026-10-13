@@ -10,7 +10,9 @@ if you want to view the source, please visit the github repository of this plugi
 */
 `;
 
-const prod = process.env.BUILD_ENV === "production";
+// コマンドライン引数または環境変数から本番ビルド（production）かどうかを判定
+// （Windows環境のcmd/PowerShellでも動作するように引数 process.argv[2] をサポート）
+const prod = process.argv[2] === "production" || process.env.BUILD_ENV === "production";
 
 const context = await esbuild.context({
 	banner: {
