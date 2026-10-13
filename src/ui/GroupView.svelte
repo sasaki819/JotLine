@@ -20,6 +20,7 @@
 	import type { JotGroup } from "../types";
 	import type { JotStore } from "../store";
 	import { icon } from "../utils/icon";
+	import { t } from "../i18n";
 	import CardView from "./CardView.svelte";
 
 	/** 表示対象のグループデータ */
@@ -37,6 +38,8 @@
 	/** カード右クリック（コンテキストメニュー表示）時のコールバック関数 */
 	export let onContextMenuCard: (cardId: string, event: MouseEvent) => void = () => {};
 
+	/** スレッドが折りたたまれているかどうかのフラグ */
+	let isCollapsed = false;
 	/** ドラッグオーバー中かどうかのフラグ（枠線ハイライト用） */
 	let isDragOver = false;
 	/** グループ名変更中かどうかのフラグ */
@@ -91,7 +94,15 @@
 	async function handleCopyGroup() {
 		const md = store.exportGroup(group.id);
 		await navigator.clipboard.writeText(md);
-		new Notice(`Group "${group.name || "Default"}" copied as Markdown`);
+		new Notice(t("NOTICE_COPIED_GROUP", group.name || "Default"));
+	}
+
+	/**
+	 * グループを所属カードごと削除する
+	 */
+	async function handleDeleteGroup() {
+		await store.deleteGroup(group.id);
+		new Notice(t("NOTICE_GROUP_DELETED", group.name || "Thread"));
 	}
 
 	/**
@@ -141,7 +152,7 @@
 
 <!-- グループ全体のコンテナ（名前付きスレッドまたはデフォルトグループ） -->
 <div
-	class="jotline-group {group.name ? 'is-thread' : 'is-default'} {isDragOver ? 'is-dragover' : ''}"
+	class="jotline-group {group.name ? 'is-thread' : 'is-default'} {isDragOver ? 'is-dragover' : ''} {isCollapsed ? 'is-collapsed' : ''}"
 	on:dragover={handleDragOver}
 	on:dragleave={handleDragLeave}
 	on:drop={(e) => handleDrop(e)}
@@ -152,7 +163,14 @@
 		<!-- スレッドヘッダー（名前付きグループのみ表示） -->
 		<div class="jotline-group-header">
 			<div class="jotline-group-title">
-				<span class="jotline-thread-icon">🧵</span>
+				<!-- アコーディオン展開/折りたたみボタン -->
+				<button
+					class="clickable-icon jotline-collapse-toggle"
+					aria-label={isCollapsed ? t("EXPAND_THREAD") : t("COLLAPSE_THREAD")}
+					title={isCollapsed ? t("EXPAND_THREAD") : t("COLLAPSE_THREAD")}
+					use:icon={isCollapsed ? "chevron-right" : "chevron-down"}
+					on:click={() => (isCollapsed = !isCollapsed)}
+				></button>
 				{#if isRenaming}
 					<!-- スレッド名のインライン編集入力ボックス -->
 					<div class="jotline-rename-box">
@@ -165,81 +183,92 @@
 								else if (e.key === "Escape") cancelRename();
 							}}
 						/>
-						<button class="clickable-icon" title="Save" on:click={saveRename}>✓</button>
-						<button class="clickable-icon" title="Cancel" on:click={cancelRename}>✕</button>
+						<button class="clickable-icon" title={t("SAVE")} on:click={saveRename}>✓</button>
+						<button class="clickable-icon" title={t("CANCEL")} on:click={cancelRename}>✕</button>
 					</div>
 				{:else}
 					<!-- スレッド名ラベル（ダブルクリックまたは編集ボタンで変更可能） -->
 					<!-- svelte-ignore a11y-no-static-element-interactions -->
 					<span
 						class="jotline-thread-name clickable"
-						title="ダブルクリックで名前変更"
+						title={t("DOUBLE_CLICK_TO_RENAME")}
 						on:dblclick={startRename}
 					>
 						{group.name}
 					</span>
-					<button class="clickable-icon" title="グループ名を変更" on:click={startRename}>
+					<button class="clickable-icon" title={t("RENAME_THREAD")} on:click={startRename}>
 						✏️
 					</button>
 					<span class="jotline-card-count">({group.cards.length})</span>
 				{/if}
 			</div>
-			<!-- グループ操作ボタン群（解散、Markdownコピー） -->
+			<!-- グループ操作ボタン群（解散、Markdownコピー、削除） -->
 			<div class="jotline-group-actions">
 				<button
 					class="clickable-icon"
-					aria-label="グループ化解除（解散して未分類に戻す）"
-					title="グループ化解除（解散して未分類に戻す）"
+					aria-label={t("UNGROUP_THREAD_TOOLTIP")}
+					title={t("UNGROUP_THREAD_TOOLTIP")}
 					use:icon={"folder-minus"}
 					on:click={handleDissolveGroup}
 				></button>
 				<button
 					class="clickable-icon"
-					aria-label="スレッドをMarkdownとしてコピー"
-					title="スレッドをMarkdownとしてコピー"
+					aria-label={t("COPY_THREAD_TOOLTIP")}
+					title={t("COPY_THREAD_TOOLTIP")}
 					use:icon={"copy"}
 					on:click={handleCopyGroup}
+				></button>
+				<button
+					class="clickable-icon mod-warning"
+					aria-label={t("DELETE_THREAD_TOOLTIP")}
+					title={t("DELETE_THREAD_TOOLTIP")}
+					use:icon={"trash"}
+					on:click={handleDeleteGroup}
 				></button>
 			</div>
 		</div>
 	{/if}
 
-	<!-- グループ所属カード一覧コンテナ -->
-	<div class="jotline-group-cards">
-		{#each group.cards as card, index (card.id)}
-			<!-- 各カードのドロップ領域ラッパー（カード間の並べ替えを受け付け） -->
-			<div
-				class="jotline-card-wrapper"
-				on:dragover={(e) => {
-					e.stopPropagation();
-					handleDragOver(e);
-				}}
-				on:drop={(e) => {
-					e.stopPropagation();
-					handleDrop(e, index);
-				}}
-				role="listitem"
-			>
-				<CardView
-					{card}
-					groupId={group.id}
-					{store}
-					{app}
-					canMergeUp={!(isFirstGroup && index === 0)}
-					isSelected={selectedCardIds.has(card.id)}
-					{onSelectCard}
-					{onContextMenuCard}
-				/>
-			</div>
-		{/each}
+	<!-- グループ所属カード一覧コンテナ（折りたたまれていない時のみ表示） -->
+	{#if !isCollapsed}
+		<div class="jotline-group-cards">
+			{#each group.cards as card, index (card.id)}
+				<!-- 各カードのドロップ領域ラッパー（カード間の並べ替えを受け付け） -->
+				<div
+					class="jotline-card-wrapper"
+					on:dragover={(e) => {
+						e.stopPropagation();
+						handleDragOver(e);
+					}}
+					on:drop={(e) => {
+						e.stopPropagation();
+						handleDrop(e, index);
+					}}
+					role="listitem"
+				>
+					<CardView
+						{card}
+						groupId={group.id}
+						{store}
+						{app}
+						canMergeUp={!(isFirstGroup && index === 0)}
+						canMoveUp={index > 0}
+						canMoveDown={index < group.cards.length - 1}
+						isSelected={selectedCardIds.has(card.id)}
+						{onSelectCard}
+						{onContextMenuCard}
+					/>
+				</div>
+			{/each}
 
-		{#if group.cards.length === 0}
-			<!-- カードが0枚の時の空状態プレースホルダー -->
-			<div class="jotline-empty-group">
-				Drop cards here to add to this group
-			</div>
-		{/if}
-	</div>
+			{#if group.cards.length === 0}
+				<!-- カードが0枚の時の空状態プレースホルダー -->
+				<div class="jotline-empty-group">
+					{t("DROP_CARDS_HERE")}
+				</div>
+			{/if}
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -267,6 +296,16 @@
 		padding-bottom: 6px;
 		margin-bottom: 8px;
 		border-bottom: 1px solid var(--background-modifier-border);
+	}
+
+	.jotline-group.is-collapsed .jotline-group-header {
+		margin-bottom: 0;
+		border-bottom: none;
+		padding-bottom: 0;
+	}
+
+	.jotline-collapse-toggle {
+		padding: 2px;
 	}
 
 	.jotline-group-title {

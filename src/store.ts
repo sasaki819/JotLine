@@ -11,7 +11,10 @@ import {
 	generateGroupTimestamp,
 	ungroupCards,
 	renameGroup,
+	deleteGroupDoc,
+	moveCardInDoc,
 } from "./parser";
+import { t } from "./i18n";
 
 
 /**
@@ -289,11 +292,62 @@ export class JotStore {
 
 		if (merged) {
 			await this.save();
-			new Notice("Merged with card above");
+			new Notice(t("NOTICE_MERGED"));
 		} else {
-			new Notice("No card above to merge with");
+			new Notice(t("NOTICE_NO_CARD_ABOVE"));
 		}
 		return merged;
+	}
+
+	/**
+	 * 指定したグループを所属するカードごと削除します。
+	 * 
+	 * @param groupId 削除対象のグループID
+	 */
+	async deleteGroup(groupId: string) {
+		let modified = false;
+		this.doc.update((current) => {
+			modified = deleteGroupDoc(current, groupId);
+			return current;
+		});
+
+		if (modified) {
+			await this.save();
+		}
+	}
+
+	/**
+	 * カードを同一グループ内で1つ上へ移動（位置を入れ替え）します。
+	 * 
+	 * @param cardId 移動対象のカードID
+	 */
+	async moveCardUp(cardId: string) {
+		let moved = false;
+		this.doc.update((current) => {
+			moved = moveCardInDoc(current, cardId, "up");
+			return current;
+		});
+
+		if (moved) {
+			await this.save();
+		}
+	}
+
+	/**
+	 * カードを同一グループ内で1つ下へ移動（位置を入れ替え）します。
+	 * 
+	 * @param cardId 移動対象のカードID
+	 */
+	async moveCardDown(cardId: string) {
+		let moved = false;
+		this.doc.update((current) => {
+			moved = moveCardInDoc(current, cardId, "down");
+			return current;
+		});
+
+		if (moved) {
+			await this.save();
+		}
 	}
 
 	/**

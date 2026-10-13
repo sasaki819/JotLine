@@ -19,6 +19,8 @@ import {
 	groupSelectedCards,
 	ungroupCards,
 	renameGroup,
+	deleteGroupDoc,
+	moveCardInDoc,
 } from "./parser";
 
 describe("JotLine Parser & Serializer", () => {
@@ -138,14 +140,14 @@ Second card`;
 		expect(exported).toBe(`Point 1: Research\n\nPoint 2: Architecture\n- Detail A\n- Detail B`);
 	});
 
-	it("merges card with previous card in the same group as exact reverse of split", () => {
+	it("merges card with previous card in the same group with a newline separator", () => {
 		const doc = {
 			groups: [
 				{
 					id: "g1",
 					name: "",
 					cards: [
-						{ id: "c1", content: "Part 1 " },
+						{ id: "c1", content: "Part 1" },
 						{ id: "c2", content: "Part 2" },
 					],
 				},
@@ -155,7 +157,7 @@ Second card`;
 		const result = mergeCardWithPrevious(doc, "c2");
 		expect(result).toBe(true);
 		expect(doc.groups[0].cards).toHaveLength(1);
-		expect(doc.groups[0].cards[0].content).toBe("Part 1 Part 2");
+		expect(doc.groups[0].cards[0].content).toBe("Part 1\nPart 2");
 	});
 
 	it("merges first card of thread group with previous group's last card without extra newlines", () => {
@@ -321,4 +323,53 @@ Second card`;
 		expect(result).toBe(true);
 		expect(doc.groups[0].name).toBe("new-awesome-name");
 	});
+
+	it("deletes a group and preserves at least one default group", () => {
+		const doc = {
+			groups: [
+				{
+					id: "g1",
+					name: "thread-1",
+					cards: [{ id: "c1", content: "Card 1" }],
+				},
+			],
+		};
+
+		const result = deleteGroupDoc(doc, "g1");
+		expect(result).toBe(true);
+		expect(doc.groups).toHaveLength(1);
+		expect(doc.groups[0].name).toBe("");
+		expect(doc.groups[0].cards).toHaveLength(0);
+	});
+
+	it("moves card up and down within its group", () => {
+		const doc = {
+			groups: [
+				{
+					id: "g1",
+					name: "",
+					cards: [
+						{ id: "c1", content: "Card 1" },
+						{ id: "c2", content: "Card 2" },
+						{ id: "c3", content: "Card 3" },
+					],
+				},
+			],
+		};
+
+		// c1 cannot move up (already top)
+		expect(moveCardInDoc(doc, "c1", "up")).toBe(false);
+
+		// c2 moves up -> [c2, c1, c3]
+		expect(moveCardInDoc(doc, "c2", "up")).toBe(true);
+		expect(doc.groups[0].cards.map((c) => c.id)).toEqual(["c2", "c1", "c3"]);
+
+		// c2 moves down -> [c1, c2, c3]
+		expect(moveCardInDoc(doc, "c2", "down")).toBe(true);
+		expect(doc.groups[0].cards.map((c) => c.id)).toEqual(["c1", "c2", "c3"]);
+
+		// c3 cannot move down (already bottom)
+		expect(moveCardInDoc(doc, "c3", "down")).toBe(false);
+	});
 });
+

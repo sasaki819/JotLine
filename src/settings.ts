@@ -1,5 +1,6 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import type JotLinePlugin from "./main";
+import { t } from "./i18n";
 
 /**
  * JotLine プラグインの設定画面（Settings Tab）クラス。
@@ -22,12 +23,12 @@ export class JotLineSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		containerEl.createEl("h2", { text: "JotLine Settings" });
+		containerEl.createEl("h2", { text: t("APP_TITLE") + " Settings" });
 
 		// 1. スクラッチパッド用ファイルパス設定
 		new Setting(containerEl)
-			.setName("Scratchpad File Path")
-			.setDesc("The path to the default scratchpad Markdown file in your vault (e.g. _jotline.md).")
+			.setName(t("SETTING_SCRATCHPAD_TITLE"))
+			.setDesc(t("SETTING_SCRATCHPAD_DESC"))
 			.addText((text) =>
 				text
 					.setPlaceholder("_jotline.md")
@@ -41,8 +42,8 @@ export class JotLineSettingTab extends PluginSettingTab {
 
 		// 2. スクラッチパッド非存在時の自動生成トグル
 		new Setting(containerEl)
-			.setName("Auto-create Scratchpad")
-			.setDesc("Automatically create the scratchpad file if it does not exist when opening JotLine.")
+			.setName(t("SETTING_AUTO_CREATE_TITLE"))
+			.setDesc(t("SETTING_AUTO_CREATE_DESC"))
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.plugin.settings.autoCreateScratchpad)

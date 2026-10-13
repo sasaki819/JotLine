@@ -11,15 +11,16 @@ Inspired by conversational chat apps (LINE, Slack), JotLine allows you to rapidl
 ## ✨ Features
 
 - 💬 **Chat-Style Quick Capture**: A persistent bottom input bar designed for instantaneous idea capture without interrupting your workflow.
-- 🧵 **Thread Grouping**: Reply to any card to create or append to conversational threads (`<!-- group: YYYYMMDD-HHmmss -->`).
-- 🖱️ **Drag & Drop Reordering**: Reorder cards or move them between threads with intuitive drag-and-drop.
+- 📐 **Resizable Input Area**: Drag the top handle of the input bar vertically to expand or shrink input height (40px–400px). Double-click the handle to reset to default.
+- 🧵 **Thread Grouping & Accordion**: Reply to any card to create or append to conversational threads (`<!-- group: YYYYMMDD-HHmmss -->`). Expand or collapse entire thread groups with the accordion chevron toggle (`chevron-down` / `chevron-right`).
+- 🖱️ **Reordering & Positioning**: Reorder cards within threads using click action buttons (`arrow-up` / `arrow-down`), or drag-and-drop cards between threads with intuitive handles (`⠿`).
 - 🔗 **Internal Link Autocomplete (`[[`)**: Type `[[` in the capture bar or card inline editor to search and autocomplete notes from your vault.
 - 🖼️ **Rich Paste Support**:
   - **Images**: Paste or drag images into the input bar—automatically saved to your vault attachments folder and inserted as `![[...]]`.
   - **Tables**: Copy tables from Excel, Google Sheets, or web pages and paste them directly as formatted Markdown tables.
-- ✂️ **Lossless Card Split & Merge (`⬆️`)**:
+- ✂️ **Card Split & Merge (`⬆️`)**:
   - **Split**: Cut cards into two at the cursor position (`✂️ Split`).
-  - **Merge**: Merge a card with the one above (`⬆️`) as a lossless inverse of split (no unwanted whitespace or blank lines).
+  - **Merge**: Merge a card with the one above (`⬆️`) with a clean single newline separation.
 - 🎯 **Multi-Select & Batch Operations**:
   - `Shift + Click` for range selection; `Cmd/Ctrl + Click` for individual toggle selection.
   - Floating 2-row selection action bar with semantic icons and hover tooltips:
@@ -28,11 +29,17 @@ Inspired by conversational chat apps (LINE, Slack), JotLine allows you to rapidl
     - 📋 **Copy (`copy`)**: Export selected cards as pure Markdown.
     - 🗑️ **Delete (`trash`)**: Batch delete selected cards.
   - Right-click context menu support for all bulk actions.
-- 🏷️ **Inline Thread Renaming**: Double-click any thread title or click the ✏️ icon to rename it in place.
+- 🏷️ **Thread Header Management**:
+  - Toggle accordion collapse / expand (`chevron-down` / `chevron-right`).
+  - Rename thread title in place (double-click title or click ✏️).
+  - Copy thread contents as Markdown (`copy`).
+  - Dissolve thread back to unclassified cards (`folder-minus`).
+  - Delete entire thread and its cards (`trash`).
 - 📋 **Clean Markdown Export**: Copy cards, threads, or entire boards without internal HTML comment markers.
 - 🌐 **Hybrid Design**:
   - Global scratchpad mode (`_jotline.md`, configurable in settings).
   - Open **any** active Markdown note as a JotLine stream via `Open as JotLine`.
+- 🌍 **Multi-language Support (i18n)**: Automatically detects Obsidian and system language settings (English and Japanese) with unified, concise, and action-oriented tooltips and UI text.
 - 🤖 **AI-Agent Ready**: Automatically generates `_jotline.readme.md` in your vault so generative AI and LLM agents know how to read, create, and organize JotLine cards safely.
 
 ---
@@ -135,6 +142,9 @@ npm test
 | **Save Inline Edit** | `Cmd/Ctrl + Enter` |
 | **Split Card** | Place cursor and click `✂️ Split` |
 | **Merge with Above Card** | Click `⬆️` |
+| **Move Card Up / Down** | Click `arrow-up` / `arrow-down` button on card |
+| **Resize Input Bar** | Drag handle above input bar (double-click to reset) |
+| **Collapse / Expand Thread** | Click `chevron-down` / `chevron-right` on thread header |
 
 ---
 

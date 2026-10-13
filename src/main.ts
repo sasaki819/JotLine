@@ -3,6 +3,7 @@ import { DEFAULT_SETTINGS, JotLineSettings } from "./types";
 import { JotLineSettingTab } from "./settings";
 import { JotLineView, VIEW_TYPE_JOTLINE } from "./ui/JotLineView";
 import { JOTLINE_README_CONTENT } from "./templates/readmeTemplate";
+import { t } from "./i18n";
 
 /**
  * JotLine プラグインのメインクラス。
@@ -38,14 +39,14 @@ export default class JotLinePlugin extends Plugin {
 		this.registerView(VIEW_TYPE_JOTLINE, (leaf) => new JotLineView(leaf, this));
 
 		// 左側リボンにクイックアクセス用アイコン（吹き出しアイコン）を追加
-		this.addRibbonIcon("message-square", "Open JotLine Scratchpad", () => {
+		this.addRibbonIcon("message-square", t("CMD_OPEN_SCRATCHPAD"), () => {
 			this.openScratchpad();
 		});
 
 		// コマンド登録: デフォルトスクラッチパッドを開く
 		this.addCommand({
 			id: "open-scratchpad",
-			name: "Open JotLine scratchpad",
+			name: t("CMD_OPEN_SCRATCHPAD"),
 			callback: () => {
 				this.openScratchpad();
 			},
@@ -54,7 +55,7 @@ export default class JotLinePlugin extends Plugin {
 		// コマンド登録: 現在アクティブなMarkdownノートをJotLineビューとして開く
 		this.addCommand({
 			id: "open-active-as-jotline",
-			name: "Open current note as JotLine",
+			name: t("CMD_OPEN_CURRENT"),
 			checkCallback: (checking: boolean) => {
 				const activeFile = this.app.workspace.getActiveFile();
 				if (activeFile && activeFile.extension === "md") {
@@ -73,7 +74,7 @@ export default class JotLinePlugin extends Plugin {
 				if (file instanceof TFile && file.extension === "md") {
 					menu.addItem((item) => {
 						item
-							.setTitle("Open as JotLine")
+							.setTitle(t("CMD_OPEN_CURRENT"))
 							.setIcon("message-square")
 							.onClick(() => {
 								this.openFileAsJotLine(file, false);

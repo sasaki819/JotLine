@@ -23,6 +23,7 @@
 	import InputBar from "./InputBar.svelte";
 	import { exportToPureMarkdown } from "../parser";
 	import { icon } from "../utils/icon";
+	import { t } from "../i18n";
 
 	/** データ管理ストア */
 	export let store: JotStore;
@@ -67,12 +68,12 @@
 	async function handleCopyAll() {
 		const allCards = $doc.groups.flatMap((g) => g.cards);
 		if (allCards.length === 0) {
-			new Notice("No notes to copy");
+			new Notice(t("NOTICE_NO_NOTES_TO_COPY"));
 			return;
 		}
 		const md = exportToPureMarkdown(allCards);
 		await navigator.clipboard.writeText(md);
-		new Notice(`Copied all ${allCards.length} notes as Markdown`);
+		new Notice(t("NOTICE_COPIED_ALL", allCards.length));
 	}
 
 	/**
@@ -165,7 +166,7 @@
 			// 複数枚選択時のメニュー構成
 			menu.addItem((item) =>
 				item
-					.setTitle(`選択した${targetCardIds.length}枚をグループ化`)
+					.setTitle(t("MENU_GROUP_MULTI", targetCardIds.length))
 					.setIcon("folder-plus")
 					.onClick(async () => {
 						await handleGroupSelection();
@@ -174,7 +175,7 @@
 			if (hasCardInNamedGroup(targetCardIds)) {
 				menu.addItem((item) =>
 					item
-						.setTitle(`選択した${targetCardIds.length}枚のグループ化解除`)
+						.setTitle(t("MENU_UNGROUP_MULTI", targetCardIds.length))
 						.setIcon("folder-minus")
 						.onClick(async () => {
 							await handleUngroupSelection();
@@ -183,7 +184,7 @@
 			}
 			menu.addItem((item) =>
 				item
-					.setTitle(`選択した${targetCardIds.length}枚をMarkdownコピー`)
+					.setTitle(t("MENU_COPY_MULTI", targetCardIds.length))
 					.setIcon("copy")
 					.onClick(async () => {
 						await handleCopySelection();
@@ -191,7 +192,7 @@
 			);
 			menu.addItem((item) =>
 				item
-					.setTitle(`選択した${targetCardIds.length}枚を削除`)
+					.setTitle(t("MENU_DELETE_MULTI", targetCardIds.length))
 					.setIcon("trash")
 					.onClick(async () => {
 						await handleDeleteSelection();
@@ -200,7 +201,7 @@
 			menu.addSeparator();
 			menu.addItem((item) =>
 				item
-					.setTitle("選択を解除")
+					.setTitle(t("MENU_CLEAR_SELECTION"))
 					.setIcon("x")
 					.onClick(() => {
 						clearSelection();
@@ -211,7 +212,7 @@
 			if (hasCardInNamedGroup([cardId])) {
 				menu.addItem((item) =>
 					item
-						.setTitle("グループ化解除 (未分類に戻す)")
+						.setTitle(t("MENU_CARD_UNGROUP"))
 						.setIcon("folder-minus")
 						.onClick(async () => {
 							await store.ungroupSelectedCards([cardId]);
@@ -221,7 +222,7 @@
 			} else {
 				menu.addItem((item) =>
 					item
-						.setTitle("このカードをグループ化")
+						.setTitle(t("MENU_CARD_GROUP"))
 						.setIcon("folder-plus")
 						.onClick(async () => {
 							await store.groupSelectedCards([cardId]);
@@ -231,17 +232,17 @@
 			}
 			menu.addItem((item) =>
 				item
-					.setTitle("Markdownとしてコピー")
+					.setTitle(t("MENU_CARD_COPY"))
 					.setIcon("copy")
 					.onClick(async () => {
 						const md = store.exportCard(cardId);
 						await navigator.clipboard.writeText(md);
-						new Notice("Card copied to clipboard");
+						new Notice(t("NOTICE_COPIED_CARD"));
 					})
 			);
 			menu.addItem((item) =>
 				item
-					.setTitle("カードを削除")
+					.setTitle(t("MENU_CARD_DELETE"))
 					.setIcon("trash")
 					.onClick(async () => {
 						await store.deleteCard(cardId);
@@ -282,7 +283,7 @@
 		if (ids.length === 0) return;
 		const md = store.exportSelectedCards(ids);
 		await navigator.clipboard.writeText(md);
-		new Notice(`Copied ${ids.length} cards as Markdown`);
+		new Notice(t("NOTICE_COPIED_SELECTION", ids.length));
 	}
 
 	/**
@@ -316,17 +317,17 @@
 		<div class="jotline-header-actions">
 			<button
 				class="clickable-icon"
-				title="Copy all notes as Markdown"
+				title={t("COPY_ALL_TOOLTIP")}
 				on:click={handleCopyAll}
 			>
-				📋 Copy All
+				📋 {t("COPY_ALL")}
 			</button>
 			<button
 				class="clickable-icon"
-				title="Open in standard Markdown editor"
+				title={t("OPEN_IN_EDITOR_TOOLTIP")}
 				on:click={handleOpenInEditor}
 			>
-				📝 Markdown
+				📝 {t("OPEN_IN_EDITOR")}
 			</button>
 		</div>
 	</div>
@@ -349,8 +350,8 @@
 			<!-- カードが1枚も存在しない場合の初期ウェルカム表示 -->
 			<div class="jotline-welcome-empty">
 				<div class="jotline-welcome-icon">💬</div>
-				<h3>No notes yet</h3>
-				<p>Type a thought below to quickly capture it.</p>
+				<h3>{t("EMPTY_WELCOME_TITLE")}</h3>
+				<p>{t("EMPTY_WELCOME_DESC")}</p>
 			</div>
 		{/if}
 	</div>
@@ -361,12 +362,12 @@
 			<!-- 選択バー 1行目: 選択件数表示と閉じる(選択解除)ボタン -->
 			<div class="jotline-selection-header">
 				<span class="jotline-selection-count">
-					{selectedCardIds.size}件のカードを選択中
+					{t("SELECTED_COUNT", selectedCardIds.size)}
 				</span>
 				<button
 					class="clickable-icon"
-					aria-label="選択を解除"
-					title="選択を解除"
+					aria-label={t("CLEAR_SELECTION")}
+					title={t("CLEAR_SELECTION")}
 					use:icon={"x"}
 					on:click={clearSelection}
 				></button>
@@ -375,31 +376,31 @@
 			<div class="jotline-selection-actions">
 				<button
 					class="clickable-icon mod-cta"
-					aria-label={selectedCardIds.size >= 2 ? "選択したカードをグループ化" : "グループ化（2枚以上選択）"}
-					title={selectedCardIds.size >= 2 ? "選択したカードをグループ化" : "グループ化（2枚以上選択）"}
+					aria-label={selectedCardIds.size >= 2 ? t("GROUP_SELECTION") : t("GROUP_SELECTION_DISABLED")}
+					title={selectedCardIds.size >= 2 ? t("GROUP_SELECTION") : t("GROUP_SELECTION_DISABLED")}
 					use:icon={"folder-plus"}
 					on:click={handleGroupSelection}
 				></button>
 				{#if anySelectedInGroup}
 					<button
 						class="clickable-icon"
-						aria-label="グループ化解除（未分類に戻す）"
-						title="グループ化解除（未分類に戻す）"
+						aria-label={t("UNGROUP_SELECTION")}
+						title={t("UNGROUP_SELECTION")}
 						use:icon={"folder-minus"}
 						on:click={handleUngroupSelection}
 					></button>
 				{/if}
 				<button
 					class="clickable-icon"
-					aria-label="選択したカードをMarkdownコピー"
-					title="選択したカードをMarkdownコピー"
+					aria-label={t("COPY_SELECTION_TOOLTIP")}
+					title={t("COPY_SELECTION_TOOLTIP")}
 					use:icon={"copy"}
 					on:click={handleCopySelection}
 				></button>
 				<button
 					class="clickable-icon mod-warning"
-					aria-label="選択したカードを削除"
-					title="選択したカードを削除"
+					aria-label={t("DELETE_SELECTION")}
+					title={t("DELETE_SELECTION")}
 					use:icon={"trash"}
 					on:click={handleDeleteSelection}
 				></button>

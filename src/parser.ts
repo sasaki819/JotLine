@@ -171,9 +171,9 @@ export function exportToPureMarkdown(cards: JotCard[]): string {
 /**
  * 対象カードをその直前にあるカードと直接結合（マージ）します。
  * 
- * 【可逆性の保証】:
- * - カード分割（`splitCard`）の完全な逆操作として機能します。
- * - 余分な改行や空白（`\n\n` 等）を一切挿入せず、テキスト同士を直接連結します。
+ * 【結合仕様】:
+ * - 行単位・メモ単位での分割や独立したメモの統合を考慮し、改行1つ（`\n`）を挟んで結合します。
+ *   （すでに直前カード末尾または対象カード先頭に改行が含まれている場合は二重改行を防止）
  * - 直前のカードと結合後、元の対象カードは安全に削除されます。
  * - もし対象カードがグループの先頭だった場合、直前のグループの末尾カードを探索して結合します。
  *   結合後に空になったスレッドグループは自動的に削除されます。
@@ -191,8 +191,8 @@ export function mergeCardWithPrevious(doc: JotDocument, cardId: string): boolean
 				// 同一グループ内の直前カードと結合
 				const prevCard = group.cards[cIdx - 1];
 				const currentCard = group.cards[cIdx];
-				// 余分な改行を挟まず直接連結（Split の可逆逆操作）
-				prevCard.content = prevCard.content + currentCard.content;
+				const separator = prevCard.content.endsWith("\n") || currentCard.content.startsWith("\n") ? "" : "\n";
+				prevCard.content = prevCard.content + separator + currentCard.content;
 				group.cards.splice(cIdx, 1);
 				return true;
 			} else if (g > 0) {
@@ -202,7 +202,8 @@ export function mergeCardWithPrevious(doc: JotDocument, cardId: string): boolean
 					if (prevGroup.cards.length > 0) {
 						const prevCard = prevGroup.cards[prevGroup.cards.length - 1];
 						const currentCard = group.cards[cIdx];
-						prevCard.content = prevCard.content + currentCard.content;
+						const separator = prevCard.content.endsWith("\n") || currentCard.content.startsWith("\n") ? "" : "\n";
+						prevCard.content = prevCard.content + separator + currentCard.content;
 						group.cards.splice(cIdx, 1);
 						// カードが空になったスレッドグループ（名前付き）は自動除去
 						if (group.cards.length === 0 && group.name !== "") {
@@ -404,6 +405,56 @@ export function renameGroup(doc: JotDocument, groupId: string, newName: string):
 	group.name = trimmed;
 	return true;
 }
+
+/**
+ * 指定したグループを所属カードごと削除します。
+ * 全グループがなくなった場合は空のデフォルトグループを1つ確保します。
+ * 
+ * @param doc JotDocument ドキュメント
+ * @param groupId 削除対象のグループID
+ * @returns 削除が実行された場合は true
+ */
+export function deleteGroupDoc(doc: JotDocument, groupId: string): boolean {
+	const idx = doc.groups.findIndex((g) => g.id === groupId);
+	if (idx === -1) return false;
+	doc.groups.splice(idx, 1);
+	if (doc.groups.length === 0) {
+		doc.groups.push({
+			id: generateId(),
+			name: "",
+			cards: [],
+		});
+	}
+	return true;
+}
+
+/**
+ * カードを所属グループ内で1つ上または下へ移動（隣接カードと位置を交換）します。
+ * 
+ * @param doc JotDocument ドキュメント
+ * @param cardId 対象カードID
+ * @param direction 移動方向 ("up" または "down")
+ * @returns 移動できた場合は true
+ */
+export function moveCardInDoc(doc: JotDocument, cardId: string, direction: "up" | "down"): boolean {
+	for (const group of doc.groups) {
+		const idx = group.cards.findIndex((c) => c.id === cardId);
+		if (idx !== -1) {
+			if (direction === "up" && idx > 0) {
+				const [card] = group.cards.splice(idx, 1);
+				group.cards.splice(idx - 1, 0, card);
+				return true;
+			} else if (direction === "down" && idx < group.cards.length - 1) {
+				const [card] = group.cards.splice(idx, 1);
+				group.cards.splice(idx + 1, 0, card);
+				return true;
+			}
+			return false;
+		}
+	}
+	return false;
+}
+
 
 
 

@@ -16,6 +16,8 @@
 	import { App, Component, MarkdownRenderer, Notice } from "obsidian";
 	import type { JotCard } from "../types";
 	import type { JotStore } from "../store";
+	import { icon } from "../utils/icon";
+	import { t } from "../i18n";
 	import LinkSuggest from "./LinkSuggest.svelte";
 
 	/** 表示対象のカードデータ */
@@ -26,6 +28,10 @@
 	export let app: App;
 	/** 上位カードと結合（Merge Up）可能かどうかのフラグ（ドキュメント最上位のカード以外はtrue） */
 	export let canMergeUp = false;
+	/** グループ内で1つ上へ移動可能かどうかのフラグ（先頭カード以外はtrue） */
+	export let canMoveUp = false;
+	/** グループ内で1つ下へ移動可能かどうかのフラグ（末尾カード以外はtrue） */
+	export let canMoveDown = false;
 	/** 複数選択状態かどうか */
 	export let isSelected = false;
 	/** カードクリック時の選択イベント通知コールバック */
@@ -154,7 +160,7 @@
 	/** カード本文の単体クリップボードコピー */
 	async function handleCopy() {
 		await navigator.clipboard.writeText(card.content);
-		new Notice("Card copied to clipboard");
+		new Notice(t("NOTICE_COPIED_CARD"));
 	}
 
 	/** カードの削除 */
@@ -167,6 +173,16 @@
 		await store.mergeWithPreviousCard(card.id);
 	}
 
+	/** カードをグループ内で1つ上へ移動 */
+	async function handleMoveUp() {
+		await store.moveCardUp(card.id);
+	}
+
+	/** カードをグループ内で1つ下へ移動 */
+	async function handleMoveDown() {
+		await store.moveCardDown(card.id);
+	}
+
 	/**
 	 * 編集モード中、カーソル位置でカードを2分割（Split）します。
 	 */
@@ -177,9 +193,9 @@
 			const after = editContent.substring(selStart);
 			await store.splitCard(card.id, before, after);
 			isEditing = false;
-			new Notice("Card split into two");
+			new Notice(t("NOTICE_CARD_SPLIT"));
 		} else {
-			new Notice("Place cursor inside text to split");
+			new Notice(t("NOTICE_SPLIT_HINT"));
 		}
 	}
 
@@ -210,27 +226,46 @@
 	on:contextmenu={(e) => onContextMenuCard(card.id, e)}
 >
 	<div class="jotline-card-header">
-		<span class="jotline-drag-handle" title="Drag to reorder">⠿</span>
+		<span class="jotline-drag-handle" title={t("DRAG_TO_REORDER")}>⠿</span>
 		<div class="jotline-card-actions">
+			{#if canMoveUp}
+				<button
+					class="clickable-icon"
+					aria-label={t("MOVE_UP")}
+					title={t("MOVE_UP")}
+					use:icon={"arrow-up"}
+					on:click={handleMoveUp}
+				></button>
+			{/if}
+			{#if canMoveDown}
+				<button
+					class="clickable-icon"
+					aria-label={t("MOVE_DOWN")}
+					title={t("MOVE_DOWN")}
+					use:icon={"arrow-down"}
+					on:click={handleMoveDown}
+				></button>
+			{/if}
 			{#if canMergeUp}
 				<button
 					class="clickable-icon"
-					title="一つ上のカードと統合 (Merge with card above)"
+					aria-label={t("MERGE_UP")}
+					title={t("MERGE_UP")}
 					on:click={handleMergeUp}
 				>
 					⬆️
 				</button>
 			{/if}
-			<button class="clickable-icon" title="Reply / Thread" on:click={() => (isReplying = !isReplying)}>
+			<button class="clickable-icon" aria-label={t("REPLY_THREAD")} title={t("REPLY_THREAD")} on:click={() => (isReplying = !isReplying)}>
 				💬
 			</button>
-			<button class="clickable-icon" title="Edit" on:click={startEdit}>
+			<button class="clickable-icon" aria-label={t("EDIT_CARD")} title={t("EDIT_CARD")} on:click={startEdit}>
 				✏️
 			</button>
-			<button class="clickable-icon" title="Copy Markdown" on:click={handleCopy}>
+			<button class="clickable-icon" aria-label={t("COPY_CARD")} title={t("COPY_CARD")} on:click={handleCopy}>
 				📋
 			</button>
-			<button class="clickable-icon" title="Delete" on:click={handleDelete}>
+			<button class="clickable-icon" aria-label={t("DELETE_CARD")} title={t("DELETE_CARD")} on:click={handleDelete}>
 				🗑️
 			</button>
 		</div>
@@ -282,16 +317,16 @@
 				}}
 			></textarea>
 			<div class="jotline-edit-actions">
-				<button class="mod-cta" on:click={saveEdit}>Save</button>
-				<button on:click={cancelEdit}>Cancel</button>
+				<button class="mod-cta" title={t("SAVE_EDIT")} on:click={saveEdit}>{t("SAVE")}</button>
+				<button title={t("CANCEL_EDIT")} on:click={cancelEdit}>{t("CANCEL")}</button>
 				<button
 					class="jotline-btn-split"
-					title="Split card at cursor position"
+					title={t("SPLIT_CARD")}
 					on:click={() => {
 						if (editTextareaEl) handleSplit(editTextareaEl);
 					}}
 				>
-					✂️ Split
+					✂️ {t("SPLIT_CARD")}
 				</button>
 			</div>
 		</div>
@@ -308,7 +343,7 @@
 		<div class="jotline-reply-container">
 			<input
 				type="text"
-				placeholder="Reply to this card..."
+				placeholder={t("REPLY_PLACEHOLDER")}
 				bind:value={replyText}
 				class="jotline-reply-input"
 				on:keydown={(e) => {
@@ -320,8 +355,8 @@
 					}
 				}}
 			/>
-			<button class="mod-cta" on:click={handleReply}>Reply</button>
-			<button on:click={() => (isReplying = false)}>Cancel</button>
+			<button class="mod-cta" on:click={handleReply}>{t("REPLY_SEND")}</button>
+			<button on:click={() => (isReplying = false)}>{t("CANCEL")}</button>
 		</div>
 	{/if}
 </div>

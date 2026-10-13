@@ -12,6 +12,7 @@
 	import { Notice, type App } from "obsidian";
 	import type { JotStore } from "../store";
 	import { htmlTableToMarkdownTable, tsvToMarkdownTable } from "../utils/tableConverter";
+	import { t } from "../i18n";
 	import LinkSuggest from "./LinkSuggest.svelte";
 
 	export let store: JotStore;
@@ -25,6 +26,66 @@
 	let isSuggestOpen = false;
 	let suggestQuery = "";
 	let suggestStartPos = 0;
+
+	/** ユーザーが手動でドラッグ指定した高さ（px） */
+	let userHeight: number | null = null;
+	/** ドラッグリサイズ中フラグ */
+	let isResizing = false;
+
+	/**
+	 * 上部ドラッグハンドルによる入力欄のリサイズ開始ハンドラ
+	 */
+	function startResize(e: MouseEvent) {
+		e.preventDefault();
+		isResizing = true;
+		const startY = e.clientY;
+		const startH = textareaEl ? textareaEl.offsetHeight : 42;
+
+		function onMouseMove(ev: MouseEvent) {
+			const delta = startY - ev.clientY; // 上に引っ張ると高さ増加
+			const newH = Math.max(40, Math.min(startH + delta, 400));
+			userHeight = newH;
+			if (textareaEl) {
+				textareaEl.style.height = `${newH}px`;
+			}
+		}
+
+		function onMouseUp() {
+			isResizing = false;
+			window.removeEventListener("mousemove", onMouseMove);
+			window.removeEventListener("mouseup", onMouseUp);
+		}
+
+		window.addEventListener("mousemove", onMouseMove);
+		window.addEventListener("mouseup", onMouseUp);
+	}
+
+	/**
+	 * リサイズハンドルをダブルクリックした際に高さを自動デフォルトにリセット
+	 */
+	function resetHeight() {
+		userHeight = null;
+		if (textareaEl) {
+			textareaEl.style.height = "auto";
+			textareaEl.style.height = `${Math.min(textareaEl.scrollHeight, 180)}px`;
+		}
+	}
+
+	/**
+	 * 入力欄の入力変更時ハンドラ（高さ自動調整とサジェスト検知）
+	 */
+	function handleInput() {
+		if (textareaEl) {
+			if (userHeight !== null) {
+				textareaEl.style.height = "auto";
+				textareaEl.style.height = `${Math.max(userHeight, Math.min(textareaEl.scrollHeight, 400))}px`;
+			} else {
+				textareaEl.style.height = "auto";
+				textareaEl.style.height = `${Math.min(textareaEl.scrollHeight, 180)}px`;
+			}
+		}
+		checkSuggest();
+	}
 
 	/**
 	 * カーソル直前の文字列を解析し、`[[` 内部リンク入力中かどうかを判定します。
@@ -74,7 +135,11 @@
 		inputText = "";
 		isSuggestOpen = false;
 		if (textareaEl) {
-			textareaEl.style.height = "auto";
+			if (userHeight !== null) {
+				textareaEl.style.height = `${userHeight}px`;
+			} else {
+				textareaEl.style.height = "auto";
+			}
 		}
 		onSend();
 	}
@@ -116,16 +181,6 @@
 		}
 	}
 
-	/**
-	 * テキスト入力時の処理: サジェスト判定とテキストエリアの高さ自動調整
-	 */
-	function handleInput() {
-		checkSuggest();
-		if (textareaEl) {
-			textareaEl.style.height = "auto";
-			textareaEl.style.height = `${Math.min(textareaEl.scrollHeight, 180)}px`;
-		}
-	}
 
 	/**
 	 * クリップボードからのペーストイベントを捕捉し、画像や表データの自動変換を行います。
@@ -192,10 +247,10 @@
 			const link = app.fileManager.generateMarkdownLink(createdFile, store.file.path);
 
 			insertAtCursor(`\n${link}\n`);
-			new Notice("Image attached to note");
+			new Notice(t("NOTICE_IMAGE_ATTACHED"));
 		} catch (err) {
 			console.error("Failed to save attachment", err);
-			new Notice("Failed to save image attachment");
+			new Notice(t("NOTICE_IMAGE_FAIL"));
 		}
 	}
 
@@ -215,48 +270,98 @@
 	}
 </script>
 
-<div class="jotline-input-bar">
-	<LinkSuggest
-		bind:this={linkSuggestComponent}
-		{app}
-		query={suggestQuery}
-		isOpen={isSuggestOpen}
-		onSelect={handleSelectLink}
-	/>
-	<textarea
-		bind:this={textareaEl}
-		bind:value={inputText}
-		rows="1"
-		placeholder="Type a memo... (Enter to send, Shift+Enter for new line)"
-		class="jotline-chat-input"
-		on:keydown={handleKeyDown}
-		on:input={handleInput}
-		on:paste={handlePaste}
-	></textarea>
-	<button
-		class="jotline-send-btn mod-cta"
-		title="Send (Enter)"
-		on:click={handleSend}
-		disabled={!inputText.trim()}
-	>
-		➤
-	</button>
+<div class="jotline-input-container">
+	<!-- 上部D&Dリサイズハンドル（ダブルクリックで高さリセット） -->
+	<!-- svelte-ignore a11y-no-static-element-interactions -->
+	<div
+		class="jotline-input-resize-handle {isResizing ? 'is-resizing' : ''}"
+		title={t("RESIZE_HANDLE_TOOLTIP")}
+		on:mousedown={startResize}
+		on:dblclick={resetHeight}
+	></div>
+	<div class="jotline-input-bar">
+		<LinkSuggest
+			bind:this={linkSuggestComponent}
+			{app}
+			query={suggestQuery}
+			isOpen={isSuggestOpen}
+			onSelect={handleSelectLink}
+		/>
+		<textarea
+			bind:this={textareaEl}
+			bind:value={inputText}
+			rows="1"
+			placeholder={t("INPUT_PLACEHOLDER")}
+			class="jotline-chat-input"
+			on:keydown={handleKeyDown}
+			on:input={handleInput}
+			on:paste={handlePaste}
+		></textarea>
+		<button
+			class="jotline-send-btn mod-cta"
+			title={t("SEND_BUTTON")}
+			aria-label={t("SEND_BUTTON")}
+			on:click={handleSend}
+			disabled={!inputText.trim()}
+		>
+			➤
+		</button>
+	</div>
 </div>
 
 <style>
+	.jotline-input-container {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		background: var(--background-secondary);
+		border-top: 1px solid var(--background-modifier-border);
+		flex-shrink: 0;
+	}
+
+	.jotline-input-resize-handle {
+		height: 6px;
+		width: 100%;
+		cursor: ns-resize;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: transparent;
+		transition: background-color 0.15s ease;
+	}
+
+	.jotline-input-resize-handle:hover,
+	.jotline-input-resize-handle.is-resizing {
+		background-color: var(--interactive-accent);
+	}
+
+	.jotline-input-resize-handle::before {
+		content: "";
+		width: 36px;
+		height: 2px;
+		border-radius: 1px;
+		background-color: var(--background-modifier-border);
+		transition: background-color 0.15s ease;
+	}
+
+	.jotline-input-resize-handle:hover::before,
+	.jotline-input-resize-handle.is-resizing::before {
+		background-color: var(--text-on-accent);
+	}
+
 	.jotline-input-bar {
 		position: relative;
 		display: flex;
 		align-items: flex-end;
 		gap: 8px;
-		padding: 10px 12px;
-		background: var(--background-secondary);
-		border-top: 1px solid var(--background-modifier-border);
+		padding: 4px 12px 10px 12px;
 	}
 
 	.jotline-chat-input {
 		flex: 1;
-		resize: none;
+		resize: vertical;
+		min-height: 38px;
+		max-height: 400px;
 		border-radius: 8px;
 		border: 1px solid var(--background-modifier-border);
 		background: var(--background-primary);
@@ -265,7 +370,6 @@
 		font-family: inherit;
 		font-size: var(--font-text-size);
 		line-height: 1.4;
-		max-height: 180px;
 		outline: none;
 		transition: border-color 0.15s ease;
 	}
