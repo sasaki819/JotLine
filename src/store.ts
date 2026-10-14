@@ -278,7 +278,7 @@ export class JotStore {
 
 	/**
 	 * 指定カードを直前のカードと結合（Merge）します。
-	 * `splitCard` の完全な可逆逆操作として、改行を挟まず直接結合します。
+	 * 直前のカードの末尾に改行1つを挟んで結合します（詳細は `mergeCardWithPrevious` を参照）。
 	 * 
 	 * @param cardId 結合元のカードID
 	 * @returns 結合できた場合は true

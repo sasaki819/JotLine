@@ -6,7 +6,7 @@
 	 * 1. テキスト入力 & Enter での即座なカード追加（Shift+Enter で改行）。
 	 * 2. 入力量に応じた textarea の高さ自動伸縮（1行〜最大180px）。
 	 * 3. `[[` 入力による内部リンクサジェスト（LinkSuggest）のインライン表示・キーボード操作。
-	 * 4. クリップボードからの画像ペースト自動検知（Vaultのアタッチメント設定に保存して `![[...]]` 挿入）。
+	 * 4. クリップボードからの画像ペーストおよび画像ファイルのドラッグ＆ドロップ自動検知（Vaultのアタッチメント設定に保存して `![[...]]` 挿入）。
 	 * 5. Excel/スプレッドシート（TSV）やHTML表の貼り付け自動検知（Markdownテーブル構文へ自動変換）。
 	 */
 	import { Notice, type App } from "obsidian";
@@ -31,6 +31,8 @@
 	let userHeight: number | null = null;
 	/** ドラッグリサイズ中フラグ */
 	let isResizing = false;
+	/** ファイルのドラッグオーバー中フラグ（入力欄の枠線ハイライト用） */
+	let isDragOver = false;
 
 	/**
 	 * 上部ドラッグハンドルによる入力欄のリサイズ開始ハンドラ
@@ -226,6 +228,40 @@
 	}
 
 	/**
+	 * ドラッグ中のデータにファイルが含まれるかを判定します（カードD&D等のファイル以外のドラッグは対象外）。
+	 */
+	function hasDraggedFiles(e: DragEvent): boolean {
+		return Array.from(e.dataTransfer?.types ?? []).includes("Files");
+	}
+
+	/**
+	 * 入力バー上へのファイルドラッグオーバー時ハンドラ（ドロップ可能であることを示します）
+	 */
+	function handleDragOver(e: DragEvent) {
+		if (!hasDraggedFiles(e)) return;
+		e.preventDefault();
+		if (e.dataTransfer) {
+			e.dataTransfer.dropEffect = "copy";
+		}
+		isDragOver = true;
+	}
+
+	/**
+	 * 入力バーへドロップされた画像ファイルを保存し、埋め込みリンクを入力欄に挿入します。
+	 */
+	async function handleDrop(e: DragEvent) {
+		isDragOver = false;
+		const images = Array.from(e.dataTransfer?.files ?? []).filter((f) => f.type.startsWith("image/"));
+		if (images.length === 0) return;
+
+		e.preventDefault();
+		e.stopPropagation();
+		for (const image of images) {
+			await saveAndInsertImage(image);
+		}
+	}
+
+	/**
 	 * 画像ファイルをVaultのアタッチメントフォルダにバイナリ保存し、Markdownリンク（`![[...]]`）を入力欄に挿入します。
 	 */
 	async function saveAndInsertImage(file: File) {
@@ -270,7 +306,13 @@
 	}
 </script>
 
-<div class="jotline-input-container">
+<!-- svelte-ignore a11y-no-static-element-interactions -->
+<div
+	class="jotline-input-container {isDragOver ? 'is-dragover' : ''}"
+	on:dragover={handleDragOver}
+	on:dragleave={() => (isDragOver = false)}
+	on:drop={handleDrop}
+>
 	<!-- 上部D&Dリサイズハンドル（ダブルクリックで高さリセット） -->
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
@@ -374,7 +416,8 @@
 		transition: border-color 0.15s ease;
 	}
 
-	.jotline-chat-input:focus {
+	.jotline-chat-input:focus,
+	.jotline-input-container.is-dragover .jotline-chat-input {
 		border-color: var(--interactive-accent);
 	}
 

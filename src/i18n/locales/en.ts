@@ -17,9 +17,7 @@ export default {
 	SELECTED_COUNT: (count: number) => `${count} selected`,
 	CLEAR_SELECTION: "Clear selection",
 	GROUP_SELECTION: "Group selected cards",
-	GROUP_SELECTION_DISABLED: "Group (select 2+ cards)",
 	UNGROUP_SELECTION: "Ungroup (move to unclassified)",
-	COPY_SELECTION: "Copy selected cards",
 	COPY_SELECTION_TOOLTIP: "Copy selected cards as Markdown",
 	DELETE_SELECTION: "Delete selected cards",
 
@@ -87,12 +85,6 @@ export default {
 	CMD_OPEN_CURRENT: "Open current note as JotLine",
 	SETTING_SCRATCHPAD_TITLE: "Scratchpad file path",
 	SETTING_SCRATCHPAD_DESC: "Path to the Markdown file used as the default JotLine scratchpad.",
-	SETTING_SEND_SHORTCUT_TITLE: "Send shortcut",
-	SETTING_SEND_SHORTCUT_DESC: "Keyboard shortcut to send cards from the input bar.",
 	SETTING_AUTO_CREATE_TITLE: "Auto-create scratchpad file",
 	SETTING_AUTO_CREATE_DESC: "Automatically create the scratchpad file if it does not exist.",
-	SETTING_RECREATE_README_TITLE: "Recreate AI Readme file",
-	SETTING_RECREATE_README_DESC: "Generate or overwrite _jotline.readme.md in the root of your vault.",
-	SETTING_RECREATE_README_BTN: "Generate Readme",
-	NOTICE_README_CREATED: "_jotline.readme.md has been generated in your vault.",
 };

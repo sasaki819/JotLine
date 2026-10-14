@@ -142,7 +142,9 @@ export default class JotLinePlugin extends Plugin {
 	 * スクラッチパッドのTFileを取得し、存在しなければ設定に応じて自動作成します。
 	 */
 	async getOrCreateScratchpadFile(): Promise<TFile | null> {
-		await this.initDefaultFiles();
+		if (this.settings.autoCreateScratchpad) {
+			await this.initDefaultFiles();
+		}
 		const path = this.settings.scratchpadPath.trim() || "_jotline.md";
 		const abstractFile = this.app.vault.getAbstractFileByPath(path);
 

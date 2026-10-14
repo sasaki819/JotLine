@@ -10,7 +10,7 @@
 	 *    - フローティング選択バー（カード複数選択時のアクションボタン群）
 	 *    - 下部入力バー（InputBarコンポーネント）
 	 * 2. カードの選択状態管理:
-	 *    - 単一選択、Ctrl/Cmd+Clickによるトグル選択、Shift+Clickによる連続範囲選択を実装。
+	 *    - 単一選択、Ctrl/Cmd+Clickによるトグル選択、Shift+Clickによる連続範囲選択、Escapeによる選択解除を実装。
 	 * 3. コンテキストメニュー（右クリックメニュー）:
 	 *    - Obsidianの `Menu` APIを利用し、選択カード数に応じたアクション（グループ化、解除、コピー、削除）を提供。
 	 * 4. 一括操作アクション:
@@ -303,10 +303,30 @@
 		selectedCardIds = new Set();
 		lastSelectedCardId = null;
 	}
+
+	/**
+	 * Escapeキーでカードの選択状態を一括解除する
+	 * カード編集欄・スレッド名編集欄・返信欄・リンクサジェストなど、Escapeが別の意味を持つ場面は除外します。
+	 */
+	function handleKeyDown(event: KeyboardEvent) {
+		if (event.key !== "Escape" || event.isComposing || selectedCardIds.size === 0) return;
+		// サジェストを閉じる等、子コンポーネントが処理済みのEscapeは無視
+		if (event.defaultPrevented) return;
+		const target = event.target as HTMLElement;
+		if (
+			target.closest(".jotline-edit-container") ||
+			target.closest(".jotline-rename-box") ||
+			target.closest(".jotline-reply-container")
+		) {
+			return;
+		}
+		clearSelection();
+	}
 </script>
 
-<!-- JotLineメインアプリケーションコンテナ -->
-<div class="jotline-app-container">
+<!-- JotLineメインアプリケーションコンテナ（tabindexはカードクリック後のキー入力を受け取るため） -->
+<!-- svelte-ignore a11y-no-static-element-interactions -->
+<div class="jotline-app-container" tabindex="-1" on:keydown={handleKeyDown}>
 	<!-- 上部ヘッダーバー: タイトル・ファイル名表示・全件コピー・エディタ切替 -->
 	<div class="jotline-header">
 		<div class="jotline-title-area">
@@ -376,8 +396,8 @@
 			<div class="jotline-selection-actions">
 				<button
 					class="clickable-icon mod-cta"
-					aria-label={selectedCardIds.size >= 2 ? t("GROUP_SELECTION") : t("GROUP_SELECTION_DISABLED")}
-					title={selectedCardIds.size >= 2 ? t("GROUP_SELECTION") : t("GROUP_SELECTION_DISABLED")}
+					aria-label={t("GROUP_SELECTION")}
+					title={t("GROUP_SELECTION")}
 					use:icon={"folder-plus"}
 					on:click={handleGroupSelection}
 				></button>
@@ -420,6 +440,7 @@
 		width: 100%;
 		background: var(--background-primary);
 		overflow: hidden;
+		outline: none;
 	}
 
 	.jotline-header {

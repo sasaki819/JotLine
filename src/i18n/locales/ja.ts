@@ -19,9 +19,7 @@ const ja: typeof en = {
 	SELECTED_COUNT: (count: number) => `${count}件を選択中`,
 	CLEAR_SELECTION: "選択を解除",
 	GROUP_SELECTION: "選択したカードをグループ化",
-	GROUP_SELECTION_DISABLED: "グループ化（2枚以上選択）",
 	UNGROUP_SELECTION: "グループ化を解除（未分類に戻す）",
-	COPY_SELECTION: "選択したカードをコピー",
 	COPY_SELECTION_TOOLTIP: "選択したカードをMarkdownとしてコピー",
 	DELETE_SELECTION: "選択したカードを削除",
 
@@ -89,14 +87,8 @@ const ja: typeof en = {
 	CMD_OPEN_CURRENT: "現在のノートをJotLineとして開く",
 	SETTING_SCRATCHPAD_TITLE: "スクラッチパッド用ファイルパス",
 	SETTING_SCRATCHPAD_DESC: "デフォルトのJotLineスクラッチパッドとして使用するMarkdownファイルのパス。",
-	SETTING_SEND_SHORTCUT_TITLE: "送信ショートカット",
-	SETTING_SEND_SHORTCUT_DESC: "入力欄からメモを送信するためのキーボードショートカット。",
 	SETTING_AUTO_CREATE_TITLE: "ファイルの自動生成",
 	SETTING_AUTO_CREATE_DESC: "スクラッチパッド用ファイルが存在しない場合に自動生成します。",
-	SETTING_RECREATE_README_TITLE: "AI向けREADMEの再生成",
-	SETTING_RECREATE_README_DESC: "Vaultルートに _jotline.readme.md を生成または上書きします。",
-	SETTING_RECREATE_README_BTN: "READMEを生成",
-	NOTICE_README_CREATED: "_jotline.readme.md をVault直下に生成しました。",
 };
 
 export default ja;

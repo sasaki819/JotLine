@@ -1,6 +1,6 @@
 /**
  * @file readmeTemplate.ts
- * @description JotLineプラグインの初回導入時（または設定から）に自動生成される
+ * @description JotLineプラグインの起動時（ファイルが存在しない場合）に自動生成される
  * `_jotline.readme.md` ファイルの初期コンテンツテンプレート。
  * 
  * プラグインの概要、HTMLコメントマーカー（<!-- group -->, <!-- card -->）のデータ構造、
