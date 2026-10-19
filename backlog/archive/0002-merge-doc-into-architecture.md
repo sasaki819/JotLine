@@ -1,7 +1,7 @@
 ---
 id: "0002"
 title: "doc/ の設計書を docs/architecture/ へ統合（移動）する"
-status: backlog        # backlog / ready / in-progress / done / dropped
+status: done        # backlog / ready / in-progress / done / dropped
 priority: medium       # high / medium / low
 owner: ""
 created: 2026-10-19
@@ -31,12 +31,15 @@ ai-dev-standard の導入により、システム全体の最新設計（正本�
 - `check-docs` が OK で終了する。
 
 ## タスク（Spec を作らない小規模な Item の場合のみ）
-- [ ] `doc/` の5文書を `git mv` で `docs/architecture/` へ移動する
-- [ ] `00.Overview.md` のドキュメントマップ（ツリー表記・リンク）を新しい配置に合わせて修正する
-- [ ] `docs/architecture/README.md` に文書の一覧と役割を追記する（初期状態の「説明のみです」の記述も更新する）
-- [ ] リポジトリ内（README.md など）に `doc/` への参照が残っていないことを確認する
-- [ ] `check-docs` を実行して OK を確認する
-- [ ] 正本ドキュメントへの反映（この Item 自体が正本の再配置のため、上記タスクで完了とする）
+- [x] `doc/` の5文書を `git mv` で `docs/architecture/` へ移動する
+  - ファイル名（`00.`〜`04.` の番号付け）は維持した。文書間のリンクは同じディレクトリ内の相対リンクのため、変更なしでそのまま辿れる。
+- [x] `00.Overview.md` のドキュメントマップ（ツリー表記・リンク）を新しい配置に合わせて修正する
+  - ツリーの起点を `docs/architecture/` にし、`README.md` の行を追加した。
+- [x] `docs/architecture/README.md` に文書の一覧と役割を追記する（初期状態の「説明のみです」の記述も更新する）
+- [x] リポジトリ内（README.md など）に `doc/` への参照が残っていないことを確認する
+  - 残っているのは、この Item 自身と完了済み Item 0001（`backlog/archive/`）の記述だけ。いずれも当時の状況の記録のため変更しない。
+- [x] `check-docs` を実行して OK を確認する
+- [x] 正本ドキュメントへの反映（この Item 自体が正本の再配置のため、上記タスクで完了とする）
 ## メモ
 
 - `docs/architecture/` はプロジェクト所有の領域で、sync では変更されない（`tools/ai-standard/manifest.txt` の記載による）。
