@@ -18,7 +18,8 @@
 
 AGENTS.md region
 CLAUDE.md
-docs/process.md
+docs/ai-dev-standard-process.md
+docs/ai-dev-standard-guide.md
 
 templates/item.md
 templates/spec/requirements.md

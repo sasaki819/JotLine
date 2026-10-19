@@ -50,7 +50,8 @@ TypeScript（ES2022）、Svelte 4、Obsidian Plugin API（minAppVersion 1.0.0、
 | `discussions/` | Discussion（`YYYY-MM-DD-<slug>.md`）。作成後は更新しない |
 | `docs/architecture/` | 正本ドキュメント |
 | `docs/adr/` | ADR（`NNNN-<slug>.md`） |
-| `docs/process.md` | 人間向けの運用フロー説明 |
+| `docs/ai-dev-standard-process.md` | 人間向けの運用フロー説明 |
+| `docs/ai-dev-standard-guide.md` | 人間向けの運用ガイド（プロンプト例付きのチュートリアル） |
 | `templates/` | 各文書の雛形。新しい文書は必ずここからコピーして作る |
 | `tools/ai-standard/` | backlog-index、check-docs（`.sh` と `.ps1`） |
 | `.claude/skills/`、`.agents/skills/` | スキル（同一内容のコピー。標準の管理対象） |
