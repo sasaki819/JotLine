@@ -176,7 +176,7 @@ export default class JotLinePlugin extends Plugin {
 		if (!file) return;
 
 		// 既に同一ファイルを開いているJotLineビューがあれば再利用
-		let leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_JOTLINE).find((l) => {
+		let leaf: WorkspaceLeaf | null | undefined = this.app.workspace.getLeavesOfType(VIEW_TYPE_JOTLINE).find((l) => {
 			const view = l.view as JotLineView;
 			return view.file?.path === file.path;
 		});
