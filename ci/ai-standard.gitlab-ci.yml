@@ -1,0 +1,14 @@
+# ai-dev-standard: check-docs job for GitLab CI.
+# Managed by ai-dev-standard (do not edit in the project; update ai-dev-standard and run sync).
+# The checks themselves are in tools/ai-standard/check-docs.sh. Include this file from .gitlab-ci.yml:
+#
+#   include:
+#     - local: ci/ai-standard.gitlab-ci.yml
+#
+# The job runs in the "test" stage. If your .gitlab-ci.yml defines "stages", include "test" in it.
+
+ai-standard:check-docs:
+  stage: test
+  image: debian:stable-slim
+  script:
+    - bash tools/ai-standard/check-docs.sh

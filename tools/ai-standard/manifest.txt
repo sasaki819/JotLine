@@ -1,0 +1,57 @@
+# ai-dev-standard manifest
+#
+# 管理対象ファイル（配布先プロジェクトのルートからの相対パス）を1行に1つ列挙する。
+# init / sync / check-docs が参照する。配布先には tools/ai-standard/manifest.txt としてコピーされる。
+#
+# 書式: <path> [gitlab|github|region]
+#   gitlab / github : init 時の host 設定（gitlab / github / both）が該当する場合だけ配置・同期する
+#   region          : ファイル全体ではなく <!-- ai-standard:begin --> から <!-- ai-standard:end --> の区間だけを管理する
+#
+# コピー元:
+#   .claude/skills/<x> と .agents/skills/<x>  -> payload/skills/<x>
+#   tools/ai-standard/manifest.txt           -> このファイル
+#   それ以外                                 -> payload/<path>
+#
+# ここに載っていないものはプロジェクト所有であり、sync では変更しない:
+#   AGENTS.md のプロジェクト固有欄、backlog/、BACKLOG.md、specs/、discussions/、
+#   docs/architecture/、docs/adr/、.gitattributes
+
+AGENTS.md region
+CLAUDE.md
+docs/process.md
+
+templates/item.md
+templates/spec/requirements.md
+templates/spec/design.md
+templates/spec/tasks.md
+templates/spec/progress.md
+templates/review.md
+templates/discussion.md
+templates/adr.md
+
+tools/ai-standard/backlog-index.sh
+tools/ai-standard/backlog-index.ps1
+tools/ai-standard/check-docs.sh
+tools/ai-standard/check-docs.ps1
+tools/ai-standard/manifest.txt
+
+.claude/skills/new-item/SKILL.md
+.claude/skills/new-spec/SKILL.md
+.claude/skills/implement-task/SKILL.md
+.claude/skills/self-review/SKILL.md
+.claude/skills/apply-review/SKILL.md
+.claude/skills/pr-draft/SKILL.md
+.claude/skills/close-item/SKILL.md
+
+.agents/skills/new-item/SKILL.md
+.agents/skills/new-spec/SKILL.md
+.agents/skills/implement-task/SKILL.md
+.agents/skills/self-review/SKILL.md
+.agents/skills/apply-review/SKILL.md
+.agents/skills/pr-draft/SKILL.md
+.agents/skills/close-item/SKILL.md
+
+ci/ai-standard.gitlab-ci.yml gitlab
+.gitlab/merge_request_templates/AI-Standard.md gitlab
+.github/workflows/ai-standard.yml github
+.github/pull_request_template.md github

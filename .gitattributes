@@ -1,0 +1,8 @@
+# ai-dev-standard: 標準ファイルの改行を LF に固定する
+# （check-docs はスキルの2箇所の一致や BACKLOG.md の最新性をバイト単位で比較するため）
+*.md text eol=lf
+*.sh text eol=lf
+*.ps1 text eol=lf
+*.yml text eol=lf
+.ai-standard-version text eol=lf
+tools/ai-standard/manifest.txt text eol=lf
