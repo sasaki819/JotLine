@@ -1,0 +1,60 @@
+# tasks: 0004 D&D によるカードとノート間の移動機能を追加する
+
+<!--
+- 1 Task はおおむね1セッションで完結する粒度にする。
+- 各 Task に「完了条件」と「検証コマンド」を書く。
+- 依存関係がある場合は Task 名の末尾に (after: 2) のように書く。
+- 検証コマンドが成功した場合だけチェックを入れる。
+- 末尾の2つの固定 Task は削除しない。
+-->
+
+- [ ] 1. ドキュメント操作の純粋関数と `JotStore` の追加メソッドを実装する
+  - 内容: `src/parser.ts` に `insertCardsInDoc`、`insertGroupAfterInDoc`、`removeCardsFromDoc` を追加する。`src/store.ts` に `insertCards`、`insertThreadAfter`、`removeCards`、`removeGroup` を追加し、内部の `save()` が結果（保存した／失敗／変化なし）を返すようにする。既存の操作メソッドの動作は変えない。design の「テスト方針」の `parser.test.ts`・`store.test.ts` の項目のテストを追加する。
+  - 完了条件: 追加したテストと既存のテストがすべて成功し、lint とビルドが通る（AC4・AC7・AC8 の JotLine 側を自動で確認）。
+  - 検証コマンド: `npm test`、`npx tsc --noEmit`、`npm run build`
+- [ ] 2. ドラッグセッションのモジュール `src/dnd.ts` を実装する
+  - 内容: design の「ドラッグセッション」と「インタフェース」のとおり、`DragSource`、`startDrag` / `endDrag` / `getDragSource`、`isCopyDrop`、`JOTLINE_DRAG_MIME` を実装し、`src/dnd.test.ts` に単体テストを書く。
+  - 完了条件: テストがすべて成功し、lint とビルドが通る。
+  - 検証コマンド: `npm test`、`npx tsc --noEmit`、`npm run build`
+- [ ] 3. JotLine からのドラッグ開始と、エディタへのドロップを実装する (after: 1, 2)
+  - 内容:
+    - `CardView`：ドラッグ開始時のセッション開始、`JOTLINE_DRAG_MIME` と `text/plain` の設定、`effectAllowed = "copyMove"`、ドラッグ終了時のセッション終了。複数選択中は選択中の全カードを対象にする。
+    - `GroupView`：スレッドヘッダーのドラッグ（スレッド名の編集中は無効）。
+    - `App`：`getDragCardIds()` を `CardView` に渡す。存在しなくなったカードを選択から外す。
+    - `main.ts`：`editor-drop` の処理（同じファイルの禁止、移動時の挿入確認と元の削除）。
+    - i18n 辞書（en / ja）に通知文のキーを追加。`manifest.json` の `minAppVersion` を `1.1.0` にする。
+  - 完了条件: ビルド・テスト・lint が通る。
+  - 検証コマンド: `npm run build`、`npm test`、`npx tsc --noEmit`
+- [ ] 4. JotLine からエディタへのドラッグを Obsidian 上で確認する (after: 3)
+  - 内容: `npm run build` で作った `main.js` を検証用 Vault に配置し、**人が** 次を確認して、結果を progress.md に記録する。design の前提（実機では未検証）を、エディタ側の実装に進む前に確かめるための Task。
+    - AC1: カード1枚・複数選択・スレッドを、別ファイルのエディタ（ソースモード、ライブプレビュー）へドロップすると、その位置に Markdown コピーと同じ内容が挿入され、JotLine 側から削除される。
+    - AC2: Ctrl（Windows / Linux）または Option（macOS）を押してドロップすると、挿入だけが行われ、JotLine 側は残る。
+    - AC5（JotLine 由来の分）: カード・スレッドをメイン入力欄へドロップすると、テキストとして挿入され、元は残る。
+    - AC6（エディタ向きの分）: JotLine と同じファイルのエディタへドロップすると、何も変わらず通知が出る。
+    - AC7（JotLine 側）: 移動のあと、JotLine のアンドゥで削除したカードが戻る。
+    - AC9: 同じビューの中でのカード並び替えと、入力バーへの画像ファイルのドロップが、これまでどおり動作する。
+    - design の「実装時に確認すること」の1〜3（エディタの標準の挿入とそのタイミング、`preventDefault()` による挿入の停止、修飾キーの取得）。
+  - 完了条件: 上記がすべて確認され、結果が progress.md に記録されている。前提が成り立たない場合は、design の修正をユーザーに相談し、承認を得てから修正する。不具合があれば修正し、Task 3 の検証コマンドを再実行している。
+  - 検証コマンド: 手動確認（結果を progress.md に記録）。あわせて `npm run build`、`npm test`、`npx tsc --noEmit`
+- [ ] 5. エディタからのドラッグと、JotLine ビューへのドロップを実装する (after: 4)
+  - 内容:
+    - `main.ts`：`document` の `dragstart`（キャプチャ段階）・`dragend` を監視し、エディタからのドラッグのセッションを開始・終了する。
+    - `GroupView`：ドロップ時に、design の「JotLine ビューへのドロップ」の表のとおりに処理する（同じビュー内の既存の並び替え、同じファイルの禁止、別ファイルのカード・スレッドの追加と移動、エディタの選択テキストのカード化と移動、セッションがない場合は何もしない）。エディタからの削除は、元の範囲の内容が変わっていないことを確かめてから行う。
+  - 完了条件: ビルド・テスト・lint が通る。
+  - 検証コマンド: `npm run build`、`npm test`、`npx tsc --noEmit`
+- [ ] 6. 全体を Obsidian 上で確認する (after: 5)
+  - 内容: `npm run build` で作った `main.js` を検証用 Vault に配置し、**人が** 次を確認して、結果を progress.md に記録する。
+    - AC3: エディタで選択したテキストを、別ファイルの JotLine ビューのタイムラインへドロップすると1枚のカードになり、元のノートから削除される。修飾キーを押していれば元は残る。
+    - AC4: カード（1枚・複数選択）とスレッドを、別ファイルの JotLine ビューへドロップすると、カードはドロップ位置に、スレッドは同名のスレッドとしてドロップしたグループの直後に追加され、元のビューから削除される。修飾キーを押していれば元は残る。
+    - AC5（エディタ由来の分）: エディタの選択テキストをメイン入力欄へドロップすると、テキストとして挿入され、元は残る。
+    - AC6（残り）: 同じファイルのエディタから JotLine ビューへ、また同じファイルを開いている別々の JotLine ビューの間でドロップすると、何も変わらず通知が出る。
+    - AC7: 移動のあと、JotLine 側は JotLine のアンドゥで、エディタ側はエディタのアンドゥで、それぞれ元に戻せる。
+    - AC1・AC2・AC9 の再確認（Task 5 の変更で壊れていないこと）。
+    - design の「実装時に確認すること」の4（エディタからのドラッグの検知と、選択範囲の取得）。
+  - 完了条件: 上記がすべて確認され、結果が progress.md に記録されている。不具合があれば修正し、Task 5 の検証コマンドを再実行している。
+  - 検証コマンド: 手動確認（結果を progress.md に記録）。あわせて `npm run build`、`npm test`、`npx tsc --noEmit`
+- [ ] 正本ドキュメント（docs/architecture/）へ design の内容を反映
+  - 完了条件: design.md の内容が docs/architecture/ に反映されている（不要なら「不要」と理由を progress.md に記載）
+  - 反映先の想定: `01.Architecture.md`（`dnd.ts`、`main.ts` のイベント登録、`JotStore` の追加メソッド、`minAppVersion`）、`03.UI-UX-Specification.md`（ドラッグ＆ドロップの操作、移動とコピー、同じファイルの禁止、スレッドヘッダーのドラッグ）、`04.Non-Functional.md`（移動の順序と失敗時の扱い）。あわせて利用者向けの `README.md` にも追記する。
+- [ ] ADR の要否判断（必要なら作成）
+  - 完了条件: 要否と理由を progress.md に記載し、必要なら docs/adr/ に ADR を作成している

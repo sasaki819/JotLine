@@ -1,11 +1,11 @@
 ---
 id: "0004"
 title: "D&D によるカードとノート間の移動機能を追加する"
-status: backlog        # backlog / ready / in-progress / done / dropped
+status: ready        # backlog / ready / in-progress / done / dropped
 priority: medium       # high / medium / low
 owner: ""
 created: 2026-10-19
-spec: ""               # 例: specs/0012-login-rework/（Spec を作らない場合は空）
+spec: "specs/0004-dnd-between-jotline-and-notes/"            # 例: specs/0012-login-rework/（Spec を作らない場合は空）
 discussions: []        # 例: [discussions/2026-10-15-auth-ideas.md]
 ---
 ## 概要

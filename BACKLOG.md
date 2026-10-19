@@ -6,7 +6,7 @@
 
 | ID | タイトル | status | priority | owner | Spec |
 |----|----------|--------|----------|-------|------|
-| [0004](backlog/items/0004-dnd-between-jotline-and-notes.md) | D&D によるカードとノート間の移動機能を追加する | backlog | medium |  |  |
+| [0004](backlog/items/0004-dnd-between-jotline-and-notes.md) | D&D によるカードとノート間の移動機能を追加する | ready | medium |  | [specs/0004-dnd-between-jotline-and-notes/](specs/0004-dnd-between-jotline-and-notes/) |
 
 ## 完了・中止
 
