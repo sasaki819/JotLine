@@ -1,11 +1,11 @@
 ---
 id: "0003"
 title: "JotLine ビューにアンドゥ／リドゥ機能を追加する（ショートカット＋ボタン）"
-status: backlog        # backlog / ready / in-progress / done / dropped
+status: ready        # backlog / ready / in-progress / done / dropped
 priority: medium       # high / medium / low
 owner: ""
 created: 2026-10-19
-spec: ""               # 例: specs/0012-login-rework/（Spec を作らない場合は空）
+spec: "specs/0003-undo-redo/"            # 例: specs/0012-login-rework/（Spec を作らない場合は空）
 discussions: []        # 例: [discussions/2026-10-15-auth-ideas.md]
 ---
 ## 概要
