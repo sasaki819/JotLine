@@ -35,6 +35,9 @@ Inspired by conversational chat apps (LINE, Slack), JotLine allows you to rapidl
   - Copy thread contents as Markdown (`copy`).
   - Dissolve thread back to unclassified cards (`folder-minus`).
   - Delete entire thread and its cards (`trash`).
+- ↩️ **Undo / Redo**: Undo or redo any change made in JotLine (adding, editing, deleting, splitting, merging, moving, grouping, and more), as well as changes to the file made outside JotLine (e.g. in the standard editor). Use the `undo-2` / `redo-2` buttons in the JotLine header, keyboard shortcuts, or the commands `JotLine: Undo` / `JotLine: Redo`.
+  - The history is kept per view, up to 100 steps, and is cleared when the view is closed or switched to another file.
+  - Card selection is cleared after undo / redo.
 - 📋 **Clean Markdown Export**: Copy cards, threads, or entire boards without internal HTML comment markers.
 - 🌐 **Hybrid Design**:
   - Global scratchpad mode (`_jotline.md`, configurable in settings).
@@ -136,6 +139,10 @@ Your Vault/
 | **Move Card Up / Down** | Click `arrow-up` / `arrow-down` button on card |
 | **Resize Input Bar** | Drag handle above input bar (double-click to reset) |
 | **Collapse / Expand Thread** | Click `chevron-down` / `chevron-right` on thread header |
+| **Undo** | `Cmd/Ctrl + Z` in the JotLine view, the `undo-2` button in the header, or command: `JotLine: Undo` (no default hotkey) |
+| **Redo** | `Cmd/Ctrl + Shift + Z` or `Ctrl + Y` in the JotLine view, the `redo-2` button in the header, or command: `JotLine: Redo` (no default hotkey) |
+
+> In the card editor, reply box, thread-name editor, and a non-empty input bar, `Cmd/Ctrl + Z` performs the text field's own undo instead. In an empty input bar, it undoes the last JotLine change (e.g. right after sending a memo).
 
 > Command names and button labels above are the English ones; they are shown in Japanese when Obsidian's language is set to Japanese.
 

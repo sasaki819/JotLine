@@ -1,4 +1,5 @@
 import { Plugin, Notice, TFile, WorkspaceLeaf, Menu } from "obsidian";
+import { get } from "svelte/store";
 import { DEFAULT_SETTINGS, JotLineSettings } from "./types";
 import { JotLineSettingTab } from "./settings";
 import { JotLineView, VIEW_TYPE_JOTLINE } from "./ui/JotLineView";
@@ -68,6 +69,18 @@ export default class JotLinePlugin extends Plugin {
 			},
 		});
 
+		// コマンド登録: アクティブなJotLineビューでアンドゥ／リドゥ（既定のホットキーは設定しない）
+		this.addCommand({
+			id: "jotline-undo",
+			name: t("CMD_UNDO"),
+			checkCallback: (checking: boolean) => this.runHistoryCommand("undo", checking),
+		});
+		this.addCommand({
+			id: "jotline-redo",
+			name: t("CMD_REDO"),
+			checkCallback: (checking: boolean) => this.runHistoryCommand("redo", checking),
+		});
+
 		// ファイルツリーやタブヘッダーの右クリックメニューに「Open as JotLine」を追加
 		this.registerEvent(
 			this.app.workspace.on("file-menu", (menu: Menu, file) => {
@@ -92,6 +105,29 @@ export default class JotLinePlugin extends Plugin {
 	 */
 	onunload() {
 		console.log("JotLine plugin unloaded");
+	}
+
+	/**
+	 * アンドゥ／リドゥコマンドの checkCallback。
+	 * アクティブなビューがJotLineビューで、実行できる履歴がある場合だけ有効にします。
+	 *
+	 * @param action "undo" または "redo"
+	 * @param checking true の場合は実行可否の判定のみ
+	 * @returns コマンドを実行可能な場合は true
+	 */
+	private runHistoryCommand(action: "undo" | "redo", checking: boolean): boolean {
+		const store = this.app.workspace.getActiveViewOfType(JotLineView)?.store;
+		if (!store) return false;
+		const state = get(store.historyState);
+		if (!(action === "undo" ? state.canUndo : state.canRedo)) return false;
+		if (!checking) {
+			if (action === "undo") {
+				store.undo();
+			} else {
+				store.redo();
+			}
+		}
+		return true;
 	}
 
 	/**

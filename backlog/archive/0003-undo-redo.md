@@ -1,7 +1,7 @@
 ---
 id: "0003"
 title: "JotLine ビューにアンドゥ／リドゥ機能を追加する（ショートカット＋ボタン）"
-status: ready        # backlog / ready / in-progress / done / dropped
+status: done        # backlog / ready / in-progress / done / dropped
 priority: medium       # high / medium / low
 owner: ""
 created: 2026-10-19

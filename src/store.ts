@@ -15,6 +15,7 @@ import {
 	moveCardInDoc,
 } from "./parser";
 import { t } from "./i18n";
+import { UndoHistory } from "./history";
 
 
 /**
@@ -25,6 +26,8 @@ import { t } from "./i18n";
  * 2. 対象 Markdown ファイル（`TFile`）の読み込み（`load`）および安全な一括保存（`save`）。
  * 3. Obsidian Vault の `modify` イベントを監視し、外部編集（他ペインや別アプリ同期）を自動検知して再描画。
  * 4. 自プラグイン保存時の更新検知ループ防止（`isSaving` フラグとデバウンス制御）。
+ * 5. アンドゥ／リドゥ用の操作履歴の管理。履歴の1件は「変更直前のファイル内容（テキスト全体）」で、
+ *    JotLine上の操作と、検知した外部変更のたびに積まれる。
  */
 export class JotStore {
 	/** Obsidian アプリケーションインスタンス */
@@ -37,6 +40,19 @@ export class JotStore {
 	isSaving = false;
 	/** Vault modify イベントのリスナー参照 */
 	private modifyEventRef: EventRef | null = null;
+	/** 最後に読み込んだ、または書き込んだファイル内容（履歴の比較・記録の基準） */
+	private currentText = "";
+	/** アンドゥ／リドゥ用の操作履歴 */
+	private history = new UndoHistory();
+	/** アンドゥ／リドゥの書き込み中フラグ（重ねての実行を防ぐ） */
+	private isApplying = false;
+	/** アンドゥ／リドゥの可否（ボタンの有効／無効表示用） */
+	historyState: Writable<{ canUndo: boolean; canRedo: boolean }> = writable({ canUndo: false, canRedo: false });
+	/**
+	 * 表示を置き換えた回数（アンドゥ／リドゥ／外部変更による読み直しのたびに増加）。
+	 * UIはこれを購読し、変化したらカードの選択を解除する。
+	 */
+	replacedCount: Writable<number> = writable(0);
 
 	constructor(app: App, file: TFile) {
 		this.app = app;
@@ -50,12 +66,12 @@ export class JotStore {
 	 * ストアを初期化し、ファイル読み込みとVault変更イベントリスナーの登録を行います。
 	 */
 	async init() {
-		await this.load();
+		await this.loadInitial();
 
 		// ファイル変更イベントを監視（他ペインや別デバイスからの変更を即座にUIへ反映）
 		this.modifyEventRef = this.app.vault.on("modify", async (modifiedFile) => {
 			if (modifiedFile.path === this.file.path && !this.isSaving) {
-				await this.load();
+				await this.handleExternalChange();
 			}
 		});
 	}
@@ -71,13 +87,13 @@ export class JotStore {
 	}
 
 	/**
-	 * 対象Markdownファイルから最新コンテンツを読み込み、パースしてストアを更新します。
+	 * 対象Markdownファイルを初回読み込みし、パースしてストアを更新します（履歴には積みません）。
 	 */
-	async load() {
+	private async loadInitial() {
 		try {
 			const content = await this.app.vault.read(this.file);
-			const parsed = parseJotDocument(content);
-			this.doc.set(parsed);
+			this.currentText = content;
+			this.doc.set(parseJotDocument(content));
 		} catch (e) {
 			console.error("JotLine: Failed to load file", e);
 			new Notice("JotLine: Failed to read file");
@@ -85,25 +101,122 @@ export class JotStore {
 	}
 
 	/**
+	 * 外部（標準エディタ、同期、他アプリ等）によるファイル変更を取り込みます。
+	 * 内容が変わっていれば、変更前の内容を1件の履歴として積み（リドゥ履歴は破棄）、表示を置き換えます。
+	 */
+	private async handleExternalChange() {
+		let content: string;
+		try {
+			content = await this.app.vault.read(this.file);
+		} catch (e) {
+			console.error("JotLine: Failed to load file", e);
+			new Notice("JotLine: Failed to read file");
+			return;
+		}
+		// 自己保存のイベントが遅れて届いた場合など、内容が同じなら何もしない
+		if (content === this.currentText) return;
+
+		this.history.record(this.currentText);
+		this.currentText = content;
+		this.doc.set(parseJotDocument(content));
+		this.replacedCount.update((n) => n + 1);
+		this.updateHistoryState();
+	}
+
+	/**
 	 * 現在のメモリ上のJotDocumentをMarkdownへシリアライズし、Vaultファイルへ一括上書き保存します。
 	 * 部分置換ではなく全体上書きを行うことで行ズレやマーカー破損を防ぎます。
+	 * 保存に成功したら、変更前の内容を1件の履歴として積みます（内容が変わらない場合は履歴にも積まず書き込みもしません）。
 	 */
-	async save() {
-		const currentDoc = get(this.doc);
-		const serialized = serializeJotDocument(currentDoc);
+	private async save() {
+		const after = serializeJotDocument(get(this.doc));
+		if (after === this.currentText) return;
 
+		const before = this.currentText;
+		if (await this.writeFile(after)) {
+			this.history.record(before);
+			this.currentText = after;
+			this.updateHistoryState();
+		}
+	}
+
+	/**
+	 * 指定した内容をVaultファイルへ書き込みます。
+	 *
+	 * @returns 書き込みに成功した場合は true
+	 */
+	private async writeFile(content: string): Promise<boolean> {
 		this.isSaving = true;
 		try {
-			await this.app.vault.modify(this.file, serialized);
+			await this.app.vault.modify(this.file, content);
+			return true;
 		} catch (e) {
 			console.error("JotLine: Failed to save file", e);
 			new Notice("JotLine: Failed to save file");
+			return false;
 		} finally {
 			// 保存完了後、Vaultのmodifyイベントが発火し終えるまで少し待ってからフラグを解除（ループ抑止）
 			setTimeout(() => {
 				this.isSaving = false;
 			}, 300);
 		}
+	}
+
+	/**
+	 * 直前の変更を取り消します（アンドゥ）。
+	 *
+	 * @returns 取り消しを実行できた場合は true
+	 */
+	async undo(): Promise<boolean> {
+		return this.applyHistory("undo");
+	}
+
+	/**
+	 * 取り消した変更をやり直します（リドゥ）。
+	 *
+	 * @returns やり直しを実行できた場合は true
+	 */
+	async redo(): Promise<boolean> {
+		return this.applyHistory("redo");
+	}
+
+	/**
+	 * 履歴から戻り先の内容を取り出してファイルへ書き込み、表示を置き換えます。
+	 * 書き込みに失敗した場合は、取り出した履歴を元のスタックへ戻します。
+	 */
+	private async applyHistory(direction: "undo" | "redo"): Promise<boolean> {
+		if (this.isApplying) return false;
+
+		const current = this.currentText;
+		const target = direction === "undo" ? this.history.undo(current) : this.history.redo(current);
+		if (target === null) return false;
+
+		this.isApplying = true;
+		try {
+			if (!(await this.writeFile(target))) {
+				// 逆方向に1回動かすと、取り出す前のスタックの状態に戻る
+				if (direction === "undo") {
+					this.history.redo(target);
+				} else {
+					this.history.undo(target);
+				}
+				return false;
+			}
+			this.currentText = target;
+			this.doc.set(parseJotDocument(target));
+			this.replacedCount.update((n) => n + 1);
+			return true;
+		} finally {
+			this.isApplying = false;
+			this.updateHistoryState();
+		}
+	}
+
+	/**
+	 * アンドゥ／リドゥの可否をUI向けストアへ反映します。
+	 */
+	private updateHistoryState() {
+		this.historyState.set({ canUndo: this.history.canUndo, canRedo: this.history.canRedo });
 	}
 
 	/**

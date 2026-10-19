@@ -8,6 +8,8 @@ export default {
 	COPY_ALL_TOOLTIP: "Copy all notes as Markdown",
 	OPEN_IN_EDITOR: "Markdown",
 	OPEN_IN_EDITOR_TOOLTIP: "Open in standard Markdown editor",
+	UNDO_TOOLTIP: "Undo (Ctrl/Cmd+Z)",
+	REDO_TOOLTIP: "Redo (Ctrl/Cmd+Shift+Z)",
 
 	// Empty State
 	EMPTY_WELCOME_TITLE: "No notes yet",
@@ -83,6 +85,8 @@ export default {
 	// Settings & Commands
 	CMD_OPEN_SCRATCHPAD: "Open JotLine scratchpad",
 	CMD_OPEN_CURRENT: "Open current note as JotLine",
+	CMD_UNDO: "Undo",
+	CMD_REDO: "Redo",
 	SETTING_SCRATCHPAD_TITLE: "Scratchpad file path",
 	SETTING_SCRATCHPAD_DESC: "Path to the Markdown file used as the default JotLine scratchpad.",
 	SETTING_AUTO_CREATE_TITLE: "Auto-create scratchpad file",
