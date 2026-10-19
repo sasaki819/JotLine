@@ -8,23 +8,23 @@
 - 末尾の2つの固定 Task は削除しない。
 -->
 
-- [ ] 1. 履歴スタック `UndoHistory` を実装する
+- [x] 1. 履歴スタック `UndoHistory` を実装する
   - 内容: `src/history.ts` に `UndoHistory` と `UNDO_HISTORY_LIMIT`（100）を design のインタフェースどおりに実装し、`src/history.test.ts` に単体テストを書く（record → undo → redo の往復、空のときの `null`、record による redo の破棄、上限超過時に古いものから捨てること、既定の上限が100であること）。
   - 完了条件: テストがすべて成功し、lint が通る。
   - 検証コマンド: `npm test`、`npx tsc --noEmit`
-- [ ] 2. `JotStore` に履歴の記録とアンドゥ／リドゥを組み込む (after: 1)
+- [x] 2. `JotStore` に履歴の記録とアンドゥ／リドゥを組み込む (after: 1)
   - 内容: design の「`JotStore` の変更」のとおり、`currentText`、`history`、`historyState`、`replacedCount`、`isApplying` を追加し、保存処理の置き換え（内容が変わらなければ履歴にも積まず書き込みもしない）、外部変更の履歴化、`undo()` / `redo()`、エラー時のスタックの巻き戻しを実装する。既存の14個の操作メソッドのシグネチャと処理内容は変えない。`src/store.test.ts` に、`obsidian` をモックした単体テストを書く（design の「テスト方針」の `store.test.ts` の項目すべて）。
   - 完了条件: スコープに挙げた各操作のアンドゥ／リドゥ、外部変更のアンドゥ／リドゥ、リドゥの破棄、`replacedCount` の増加条件、内容が変わらない操作で履歴が増えないことのテストが成功する。既存のテストも成功し、ビルドと lint が通る（AC1〜AC4 の自動確認）。
   - 検証コマンド: `npm test`、`npx tsc --noEmit`、`npm run build`
-- [ ] 3. ヘッダーのボタン、キー操作、選択の解除を実装する (after: 2)
+- [x] 3. ヘッダーのボタン、キー操作、選択の解除を実装する (after: 2)
   - 内容: i18n 辞書（en / ja）に `UNDO_TOOLTIP`、`REDO_TOOLTIP` を追加する。`App.svelte` に、ヘッダーのアンドゥ／リドゥボタン（`historyState` に応じて無効表示）、`handleKeyDown` へのキー操作の追加（入力欄の除外条件と、メイン入力欄が空のときだけ処理する条件を含む）、`replacedCount` の変化による選択の解除を実装する。
   - 完了条件: ビルド・テスト・lint が通る。キー操作の除外条件が design のとおりにコードに実装されている。
   - 検証コマンド: `npm run build`、`npm test`、`npx tsc --noEmit`
-- [ ] 4. コマンド「Undo」「Redo」を登録する (after: 2)
+- [x] 4. コマンド「Undo」「Redo」を登録する (after: 2)
   - 内容: i18n 辞書（en / ja）に `CMD_UNDO`、`CMD_REDO` を追加し、`main.ts` に `jotline-undo` / `jotline-redo` を既定のホットキーなしで登録する。`checkCallback` で、アクティブなビューが `JotLineView` で、かつ実行可能なときだけ有効にする。
   - 完了条件: ビルド・テスト・lint が通る。
   - 検証コマンド: `npm run build`、`npm test`、`npx tsc --noEmit`
-- [ ] 5. Obsidian 上で動作を確認する (after: 3, 4)
+- [x] 5. Obsidian 上で動作を確認する (after: 3, 4)
   - 内容: `npm run build` で作った `main.js` を Obsidian の検証用 Vault に配置し、**人が** 次を確認して、結果を progress.md に記録する。design の「実装時に確認すること」（Ctrl/Cmd+Z が Obsidian 本体に渡らないこと、アイコンの表示）もここで確認する。
     - AC5: アンドゥ／リドゥの結果が、同じファイルを開いている標準エディタに反映される。
     - AC6: JotLine ビューにフォーカスがあるとき、Ctrl/Cmd+Z でアンドゥ、Ctrl/Cmd+Shift+Z と Ctrl+Y でリドゥできる。
@@ -35,8 +35,8 @@
     - AC11: 複数選択中のアンドゥ／リドゥ、および外部変更で、選択が解除され選択バーが消える。
   - 完了条件: AC5〜AC11 がすべて確認され、結果が progress.md に記録されている。不具合があれば修正し、Task 2〜4 の検証コマンドを再実行している。
   - 検証コマンド: 手動確認（結果を progress.md に記録）。あわせて `npm run build`、`npm test`、`npx tsc --noEmit`
-- [ ] 正本ドキュメント（docs/architecture/）へ design の内容を反映
+- [x] 正本ドキュメント（docs/architecture/）へ design の内容を反映
   - 完了条件: design.md の内容が docs/architecture/ に反映されている（不要なら「不要」と理由を progress.md に記載）
   - 反映先の想定: `01.Architecture.md`（`JotStore` の履歴管理、コンポーネントの責務、コマンド）、`03.UI-UX-Specification.md`（ヘッダーのボタン、アンドゥ／リドゥの操作、選択の解除、キーボードショートカット一覧）、`04.Non-Functional.md`（外部変更の履歴化と、自己保存の判定）
-- [ ] ADR の要否判断（必要なら作成）
+- [x] ADR の要否判断（必要なら作成）
   - 完了条件: 要否と理由を progress.md に記載し、必要なら docs/adr/ に ADR を作成している

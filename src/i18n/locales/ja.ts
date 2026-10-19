@@ -10,6 +10,8 @@ const ja: typeof en = {
 	COPY_ALL_TOOLTIP: "すべてのメモをMarkdownとしてコピー",
 	OPEN_IN_EDITOR: "エディタ",
 	OPEN_IN_EDITOR_TOOLTIP: "通常のMarkdownエディタで開く",
+	UNDO_TOOLTIP: "元に戻す (Ctrl/Cmd+Z)",
+	REDO_TOOLTIP: "やり直す (Ctrl/Cmd+Shift+Z)",
 
 	// Empty State
 	EMPTY_WELCOME_TITLE: "まだメモがありません",
@@ -85,6 +87,8 @@ const ja: typeof en = {
 	// Settings & Commands
 	CMD_OPEN_SCRATCHPAD: "JotLine スクラッチパッドを開く",
 	CMD_OPEN_CURRENT: "現在のノートをJotLineとして開く",
+	CMD_UNDO: "元に戻す",
+	CMD_REDO: "やり直す",
 	SETTING_SCRATCHPAD_TITLE: "スクラッチパッド用ファイルパス",
 	SETTING_SCRATCHPAD_DESC: "デフォルトのJotLineスクラッチパッドとして使用するMarkdownファイルのパス。",
 	SETTING_AUTO_CREATE_TITLE: "ファイルの自動生成",

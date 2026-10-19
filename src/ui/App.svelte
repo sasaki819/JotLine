@@ -15,6 +15,9 @@
 	 *    - Obsidianの `Menu` APIを利用し、選択カード数に応じたアクション（グループ化、解除、コピー、削除）を提供。
 	 * 4. 一括操作アクション:
 	 *    - 選択カードのグループ化、グループ解除、Markdownコピー、一括削除の実行と状態リセット。
+	 * 5. アンドゥ／リドゥ:
+	 *    - ヘッダーのボタンとキー操作（Ctrl/Cmd+Z、Ctrl/Cmd+Shift+Z、Ctrl+Y）からストアのアンドゥ／リドゥを実行。
+	 *    - アンドゥ／リドゥや外部変更で表示が置き換わったら、カードの選択を解除。
 	 */
 	import { onMount, tick } from "svelte";
 	import { Notice, Menu, type App } from "obsidian";
@@ -39,6 +42,12 @@
 
 	// ストアのドキュメント状態を購読
 	$: doc = store.doc;
+	// アンドゥ／リドゥの可否（ヘッダーのボタンの有効／無効表示用）
+	$: historyState = store.historyState;
+	// 表示を置き換えた回数（アンドゥ／リドゥ／外部変更による読み直しで増える）
+	$: replacedCount = store.replacedCount;
+	// 表示が置き換わったら、カードIDが振り直されて古い選択が無効になるため選択を解除する
+	$: handleReplaced($replacedCount);
 	// ドキュメント内の全カードIDをフラットな配列として算出（範囲選択のインデックス計算に使用）
 	$: allCardIds = $doc.groups.flatMap((g) => g.cards.map((c) => c.id));
 	// 選択中のカードの中に、名前付きグループ（スレッド）に属しているカードが存在するか判定
@@ -304,12 +313,83 @@
 		lastSelectedCardId = null;
 	}
 
+	/** 直前に処理した replacedCount の値（初回の値では選択を解除しないため） */
+	let lastReplacedCount: number | null = null;
+
+	/**
+	 * 表示の置き換え（アンドゥ／リドゥ／外部変更による読み直し）を検知して選択を解除する
+	 */
+	function handleReplaced(count: number) {
+		if (lastReplacedCount !== null && count !== lastReplacedCount) {
+			clearSelection();
+		}
+		lastReplacedCount = count;
+	}
+
+	/**
+	 * キー入力がアンドゥ／リドゥのショートカットかを判定する
+	 * - アンドゥ: Ctrl/Cmd+Z
+	 * - リドゥ: Ctrl/Cmd+Shift+Z、Ctrl+Y
+	 */
+	function getHistoryAction(event: KeyboardEvent): "undo" | "redo" | null {
+		if (!(event.ctrlKey || event.metaKey) || event.altKey) return null;
+		const key = event.key.toLowerCase();
+		if (key === "z") return event.shiftKey ? "redo" : "undo";
+		if (key === "y" && event.ctrlKey && !event.shiftKey) return "redo";
+		return null;
+	}
+
+	/**
+	 * フォーカス中の入力欄が、アンドゥ／リドゥのキーを入力欄の標準動作として使うべきかを判定する
+	 * - カード編集欄・スレッド名編集欄・返信欄: 常に入力欄の標準動作
+	 * - メイン入力欄: 文字が入力されている間だけ入力欄の標準動作（空ならJotLineのアンドゥ／リドゥ）
+	 */
+	function isHandledByTextInput(target: HTMLElement): boolean {
+		if (
+			target.closest(".jotline-edit-container") ||
+			target.closest(".jotline-rename-box") ||
+			target.closest(".jotline-reply-container")
+		) {
+			return true;
+		}
+		const chatInput = target.closest(".jotline-chat-input");
+		if (chatInput instanceof HTMLTextAreaElement) {
+			return chatInput.value !== "";
+		}
+		return false;
+	}
+
+	/**
+	 * JotLineビュー内のキー入力を処理する
+	 * - Ctrl/Cmd+Z、Ctrl/Cmd+Shift+Z、Ctrl+Y: アンドゥ／リドゥ（入力欄の標準動作を優先する場面は除外）
+	 * - Escape: カードの選択状態を一括解除（Escapeが別の意味を持つ場面は除外）
+	 */
+	function handleKeyDown(event: KeyboardEvent) {
+		if (event.isComposing) return;
+
+		const historyAction = getHistoryAction(event);
+		if (historyAction) {
+			if (isHandledByTextInput(event.target as HTMLElement)) return;
+			// Obsidian本体のホットキー処理（エディタのアンドゥ等）に渡さない
+			event.preventDefault();
+			event.stopPropagation();
+			if (historyAction === "undo") {
+				store.undo();
+			} else {
+				store.redo();
+			}
+			return;
+		}
+
+		handleEscape(event);
+	}
+
 	/**
 	 * Escapeキーでカードの選択状態を一括解除する
 	 * カード編集欄・スレッド名編集欄・返信欄・リンクサジェストなど、Escapeが別の意味を持つ場面は除外します。
 	 */
-	function handleKeyDown(event: KeyboardEvent) {
-		if (event.key !== "Escape" || event.isComposing || selectedCardIds.size === 0) return;
+	function handleEscape(event: KeyboardEvent) {
+		if (event.key !== "Escape" || selectedCardIds.size === 0) return;
 		// サジェストを閉じる等、子コンポーネントが処理済みのEscapeは無視
 		if (event.defaultPrevented) return;
 		const target = event.target as HTMLElement;
@@ -335,6 +415,22 @@
 			<span class="jotline-file-badge">{store.file.basename}</span>
 		</div>
 		<div class="jotline-header-actions">
+			<button
+				class="clickable-icon jotline-history-btn"
+				aria-label={t("UNDO_TOOLTIP")}
+				title={t("UNDO_TOOLTIP")}
+				use:icon={"undo-2"}
+				disabled={!$historyState.canUndo}
+				on:click={() => store.undo()}
+			></button>
+			<button
+				class="clickable-icon jotline-history-btn"
+				aria-label={t("REDO_TOOLTIP")}
+				title={t("REDO_TOOLTIP")}
+				use:icon={"redo-2"}
+				disabled={!$historyState.canRedo}
+				on:click={() => store.redo()}
+			></button>
 			<button
 				class="clickable-icon"
 				title={t("COPY_ALL_TOOLTIP")}
@@ -495,6 +591,22 @@
 	.clickable-icon:hover {
 		background-color: var(--background-modifier-hover);
 		color: var(--text-normal);
+	}
+
+	.jotline-history-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.jotline-history-btn:disabled {
+		opacity: 0.4;
+		cursor: default;
+	}
+
+	.jotline-history-btn:disabled:hover {
+		background: none;
+		color: var(--text-muted);
 	}
 
 	.jotline-timeline {
