@@ -1,7 +1,7 @@
 ---
 id: "0001"
 title: "lint（npx tsc --noEmit）のエラーを解消する"
-status: backlog        # backlog / ready / in-progress / done / dropped
+status: done        # backlog / ready / in-progress / done / dropped
 priority: medium       # high / medium / low
 owner: ""
 created: 2026-10-19
@@ -26,11 +26,16 @@ AGENTS.md で lint コマンドに指定した `npx tsc --noEmit` が、既存�
 - 型検査を無効化・緩和する変更（`skipLibCheck` の導入や `// @ts-ignore` の追加など）を行う場合は、その範囲と理由を記録する。
 
 ## タスク（Spec を作らない小規模な Item の場合のみ）
-- [ ] `*.svelte` モジュール宣言の重複（TS2300）を解消する
-- [ ] vite の型 `rollup/parseAst` の解決エラー（TS2307）を解消する
-- [ ] `src/main.ts` の `getRightLeaf()` の戻り値の型不一致（TS2322）を解消する
-- [ ] `npx tsc --noEmit`、`npm run build`、`npm test` がすべて成功することを確認する
-- [ ] 正本ドキュメントへの反映（不要なら「不要」と理由を記載してチェック）
+- [x] `*.svelte` モジュール宣言の重複（TS2300）を解消する
+  - Svelte 4 の型定義（`node_modules/svelte/types/index.d.ts`）自体が `declare module '*.svelte'` を提供しているため、重複していた自前の `src/declarations.d.ts` を削除した。
+- [x] vite の型 `rollup/parseAst` の解決エラー（TS2307）を解消する
+  - `tsconfig.json` の `moduleResolution` を `node` から `bundler` に変更した（package.json の `exports` を解決できるようにするため。実際のバンドルは esbuild が行うため、型検査の設定のみの変更）。
+- [x] `src/main.ts` の `getRightLeaf()` の戻り値の型不一致（TS2322）を解消する
+  - `openScratchpad()` の変数 `leaf` に `WorkspaceLeaf | null | undefined` の型注釈を付けた（処理は変更なし）。
+- [x] `npx tsc --noEmit`、`npm run build`、`npm test` がすべて成功することを確認する
+  - 3つとも成功（終了コード0、テスト20件成功）。ビルド結果の `main.js` は変更前のビルドとバイト単位で一致し、実行時の動作に変化がないことを確認した。
+- [x] 正本ドキュメントへの反映：不要。型検査の設定と型注釈のみの変更で、設計・仕様・動作に変更がなく、設計書（`doc/`、`docs/architecture/`）にも該当する記述がないため。
 ## メモ
 
+- 型検査を無効化・緩和する変更（`skipLibCheck` や `// @ts-ignore` の追加）は行っていない。
 - `tsc` は `.svelte` ファイルの中身（`<script lang="ts">` 部分）を型検査しない。Svelte コンポーネントの型検査（`svelte-check` の導入など）はこの Item の範囲外とし、必要なら別 Item とする。
