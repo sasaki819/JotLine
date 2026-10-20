@@ -21,6 +21,9 @@ import {
 	renameGroup,
 	deleteGroupDoc,
 	moveCardInDoc,
+	insertCardsInDoc,
+	insertGroupAfterInDoc,
+	removeCardsFromDoc,
 } from "./parser";
 
 describe("JotLine Parser & Serializer", () => {
@@ -373,3 +376,65 @@ Second card`;
 	});
 });
 
+describe("D&D document operations", () => {
+	/** 未分類（A, B）とスレッド「topic」（C, D）のドキュメント */
+	function sampleDoc() {
+		return parseJotDocument(
+			"<!-- group -->\n<!-- card -->\nA\n\n<!-- card -->\nB\n\n<!-- group: topic -->\n<!-- card -->\nC\n\n<!-- card -->\nD\n"
+		);
+	}
+	const contentsOf = (cards: { content: string }[]) => cards.map((c) => c.content);
+
+	it("inserts cards at the head, middle and tail of a group", () => {
+		const doc = sampleDoc();
+		const gid = doc.groups[0].id;
+		expect(insertCardsInDoc(doc, gid, 0, ["head"])).toBe(true);
+		expect(insertCardsInDoc(doc, gid, 2, ["mid1", "mid2"])).toBe(true);
+		expect(insertCardsInDoc(doc, gid, 99, ["tail"])).toBe(true);
+		expect(contentsOf(doc.groups[0].cards)).toEqual(["head", "A", "mid1", "mid2", "B", "tail"]);
+	});
+
+	it("trims contents and ignores empty ones when inserting cards", () => {
+		const doc = sampleDoc();
+		const gid = doc.groups[1].id;
+		expect(insertCardsInDoc(doc, gid, 0, ["  x  ", "   "])).toBe(true);
+		expect(contentsOf(doc.groups[1].cards)).toEqual(["x", "C", "D"]);
+		expect(insertCardsInDoc(doc, gid, 0, ["", "  "])).toBe(false);
+	});
+
+	it("returns false when inserting cards into a missing group", () => {
+		const doc = sampleDoc();
+		expect(insertCardsInDoc(doc, "missing", 0, ["x"])).toBe(false);
+	});
+
+	it("inserts a thread right after the given group", () => {
+		const doc = sampleDoc();
+		expect(insertGroupAfterInDoc(doc, doc.groups[0].id, " moved ", ["E", "F"])).toBe(true);
+		expect(doc.groups.map((g) => g.name)).toEqual(["", "moved", "topic"]);
+		expect(contentsOf(doc.groups[1].cards)).toEqual(["E", "F"]);
+	});
+
+	it("returns false when inserting a thread after a missing group, without a name, or without cards", () => {
+		const doc = sampleDoc();
+		expect(insertGroupAfterInDoc(doc, "missing", "x", ["E"])).toBe(false);
+		expect(insertGroupAfterInDoc(doc, doc.groups[0].id, "  ", ["E"])).toBe(false);
+		expect(insertGroupAfterInDoc(doc, doc.groups[0].id, "x", ["  "])).toBe(false);
+		expect(doc.groups.length).toBe(2);
+	});
+
+	it("removes cards, drops emptied threads and keeps the unclassified group", () => {
+		const doc = sampleDoc();
+		const [a, b] = doc.groups[0].cards.map((c) => c.id);
+		const [c, d] = doc.groups[1].cards.map((c) => c.id);
+		expect(removeCardsFromDoc(doc, [a, b, c, d])).toBe(true);
+		expect(doc.groups.length).toBe(1);
+		expect(doc.groups[0].name).toBe("");
+		expect(doc.groups[0].cards).toEqual([]);
+	});
+
+	it("returns false when none of the cards exist", () => {
+		const doc = sampleDoc();
+		expect(removeCardsFromDoc(doc, ["missing"])).toBe(false);
+		expect(doc.groups.length).toBe(2);
+	});
+});

@@ -1,7 +1,7 @@
 ---
 id: "0004"
 title: "D&D によるカードとノート間の移動機能を追加する"
-status: ready        # backlog / ready / in-progress / done / dropped
+status: done        # backlog / ready / in-progress / done / dropped
 priority: medium       # high / medium / low
 owner: ""
 created: 2026-10-19

@@ -81,6 +81,9 @@ export default {
 	NOTICE_SPLIT_HINT: "Place cursor inside text to split",
 	NOTICE_IMAGE_ATTACHED: "Image attached to note",
 	NOTICE_IMAGE_FAIL: "Failed to save image attachment",
+	NOTICE_DROP_SAME_FILE: "Cannot drop onto the same file",
+	NOTICE_MOVE_SOURCE_NOT_REMOVED: "Copied, but could not remove the original",
+	NOTICE_DROP_INSERT_UNCONFIRMED: "Could not confirm the insertion; the original was kept",
 
 	// Settings & Commands
 	CMD_OPEN_SCRATCHPAD: "Open JotLine scratchpad",

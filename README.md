@@ -14,6 +14,11 @@ Inspired by conversational chat apps (LINE, Slack), JotLine allows you to rapidl
 - 📐 **Resizable Input Area**: Drag the top handle of the input bar vertically to expand or shrink input height (40px–400px). Double-click the handle to reset to default.
 - 🧵 **Thread Grouping & Accordion**: Reply to any card to create or append to conversational threads (`<!-- group: YYYYMMDD-HHmmss -->`). Expand or collapse entire thread groups with the accordion chevron toggle (`chevron-down` / `chevron-right`).
 - 🖱️ **Reordering & Positioning**: Reorder cards within threads using click action buttons (`arrow-up` / `arrow-down`), or drag-and-drop cards between threads with intuitive handles (`⠿`).
+- 🔀 **Drag & Drop Between JotLine and Notes**: Move cards, multi-selected cards, or whole threads (drag the thread header) from JotLine into any note in the editor, and drag selected text from a note into JotLine to turn it into a card. Also works between JotLine views of different files.
+  - A normal drop **moves** (the original is removed); hold `Ctrl` (Windows / Linux) or `Option` (macOS) while dropping to **copy** instead.
+  - Dropping into the JotLine input bar inserts the text there.
+  - Dropping onto the same file (e.g. a JotLine view and an editor showing the same note) is not allowed.
+  - Moves can be reverted with undo on each side (JotLine undo / editor undo). Desktop only.
 - 🔗 **Internal Link Autocomplete (`[[`)**: Type `[[` in the capture bar or card inline editor to search and autocomplete notes from your vault.
 - 🖼️ **Rich Paste Support**:
   - **Images**: Paste or drag images into the input bar—automatically saved to your vault attachments folder and inserted as `![[...]]`.
@@ -139,6 +144,8 @@ Your Vault/
 | **Move Card Up / Down** | Click `arrow-up` / `arrow-down` button on card |
 | **Resize Input Bar** | Drag handle above input bar (double-click to reset) |
 | **Collapse / Expand Thread** | Click `chevron-down` / `chevron-right` on thread header |
+| **Move Cards / Thread into a Note** | Drag cards (or a thread header) from JotLine and drop into another note's editor; hold `Ctrl` / `Option` to copy |
+| **Turn Note Text into a Card** | Select text in a note and drag it onto a JotLine view of another file; hold `Ctrl` / `Option` to copy |
 | **Undo** | `Cmd/Ctrl + Z` in the JotLine view, the `undo-2` button in the header, or command: `JotLine: Undo` (no default hotkey) |
 | **Redo** | `Cmd/Ctrl + Shift + Z` or `Ctrl + Y` in the JotLine view, the `redo-2` button in the header, or command: `JotLine: Redo` (no default hotkey) |
 
