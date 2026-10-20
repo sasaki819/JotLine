@@ -48,6 +48,8 @@
 	$: replacedCount = store.replacedCount;
 	// 表示が置き換わったら、カードIDが振り直されて古い選択が無効になるため選択を解除する
 	$: handleReplaced($replacedCount);
+	// 存在しなくなったカード（ドラッグ＆ドロップでの移動などで削除されたもの）を選択から外す
+	$: pruneSelection(allCardIds);
 	// ドキュメント内の全カードIDをフラットな配列として算出（範囲選択のインデックス計算に使用）
 	$: allCardIds = $doc.groups.flatMap((g) => g.cards.map((c) => c.id));
 	// 選択中のカードの中に、名前付きグループ（スレッド）に属しているカードが存在するか判定
@@ -313,6 +315,29 @@
 		lastSelectedCardId = null;
 	}
 
+	/**
+	 * 存在しなくなったカードを選択から外す
+	 */
+	function pruneSelection(existingIds: string[]) {
+		const existing = new Set(existingIds);
+		if ([...selectedCardIds].every((id) => existing.has(id))) return;
+		selectedCardIds = new Set([...selectedCardIds].filter((id) => existing.has(id)));
+		if (lastSelectedCardId && !existing.has(lastSelectedCardId)) {
+			lastSelectedCardId = null;
+		}
+	}
+
+	/**
+	 * ドラッグ対象のカードID一覧を求める
+	 * ドラッグしたカードが選択中で、選択が2枚以上なら選択中の全カード（ドキュメント上の並び順）、それ以外はドラッグしたカード1枚。
+	 */
+	function getDragCardIds(cardId: string): string[] {
+		if (selectedCardIds.has(cardId) && selectedCardIds.size >= 2) {
+			return allCardIds.filter((id) => selectedCardIds.has(id));
+		}
+		return [cardId];
+	}
+
 	/** 直前に処理した replacedCount の値（初回の値では選択を解除しないため） */
 	let lastReplacedCount: number | null = null;
 
@@ -459,6 +484,7 @@
 				{selectedCardIds}
 				onSelectCard={handleSelectCard}
 				onContextMenuCard={handleContextMenuCard}
+				{getDragCardIds}
 			/>
 		{/each}
 

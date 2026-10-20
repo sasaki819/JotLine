@@ -260,3 +260,99 @@ describe("JotStore undo / redo", () => {
 		expect(get(store.historyState).canUndo).toBe(false);
 	});
 });
+
+describe("JotStore insert / remove for drag and drop", () => {
+	beforeEach(() => {
+		vi.useFakeTimers();
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	it("inserts cards at a position as one undoable step", async () => {
+		const { store, fake } = await createStore();
+		const before = fake.getContent();
+		const { topicId } = ids(store);
+
+		expect(await store.insertCards(topicId, 1, ["Dropped 1", "Dropped 2"])).toBe(true);
+		const topic = docOf(store).groups.find((g) => g.name === "topic")!;
+		expect(topic.cards.map((c) => c.content)).toEqual(["Card C", "Dropped 1", "Dropped 2", "Card D"]);
+
+		await store.undo();
+		expect(fake.getContent()).toBe(before);
+		expect(get(store.historyState).canUndo).toBe(false);
+	});
+
+	it("inserts a thread after a group as one undoable step", async () => {
+		const { store, fake } = await createStore();
+		const before = fake.getContent();
+		const unclassifiedId = docOf(store).groups[0].id;
+
+		expect(await store.insertThreadAfter(unclassifiedId, "moved", ["E", "F"])).toBe(true);
+		expect(docOf(store).groups.map((g) => g.name)).toEqual(["", "moved", "topic"]);
+		expect(fake.getContent()).toContain("<!-- group: moved -->");
+
+		await store.undo();
+		expect(fake.getContent()).toBe(before);
+	});
+
+	it("removes cards as one undoable step", async () => {
+		const { store, fake } = await createStore();
+		const before = fake.getContent();
+		const { a, c, d } = ids(store);
+
+		expect(await store.removeCards([a, c, d])).toBe(true);
+		// スレッド topic は空になったため削除される
+		expect(docOf(store).groups.map((g) => g.name)).toEqual([""]);
+		expect(docOf(store).groups[0].cards.map((card) => card.content)).toEqual(["Card B"]);
+
+		await store.undo();
+		expect(fake.getContent()).toBe(before);
+	});
+
+	it("removes a group as one undoable step", async () => {
+		const { store, fake } = await createStore();
+		const before = fake.getContent();
+
+		expect(await store.removeGroup(ids(store).topicId)).toBe(true);
+		expect(fake.getContent()).not.toContain("topic");
+
+		await store.undo();
+		expect(fake.getContent()).toBe(before);
+	});
+
+	it("returns false without writing when the target does not exist", async () => {
+		const { store, fake } = await createStore();
+
+		expect(await store.insertCards("missing", 0, ["x"])).toBe(false);
+		expect(await store.insertThreadAfter("missing", "x", ["x"])).toBe(false);
+		expect(await store.removeCards(["missing"])).toBe(false);
+		expect(await store.removeGroup("missing")).toBe(false);
+		expect(fake.vault.modify).not.toHaveBeenCalled();
+		expect(get(store.historyState).canUndo).toBe(false);
+	});
+
+	it("returns false and restores the view when writing fails", async () => {
+		const { store, fake } = await createStore();
+		const { topicId } = ids(store);
+
+		fake.failNextModify();
+		expect(await store.insertCards(topicId, 0, ["x"])).toBe(false);
+		expect(fake.getContent()).toBe(SAMPLE);
+		expect(get(store.historyState).canUndo).toBe(false);
+		// 失敗した追加が表示に残らない
+		expect(docOf(store).groups.flatMap((g) => g.cards).map((c) => c.content)).toEqual([
+			"Card A",
+			"Card B",
+			"Card C",
+			"Card D",
+		]);
+
+		fake.failNextModify();
+		expect(await store.removeCards([ids(store).a])).toBe(false);
+		expect(fake.getContent()).toBe(SAMPLE);
+		// 失敗した削除が表示に残らない
+		expect(docOf(store).groups[0].cards.map((c) => c.content)).toEqual(["Card A", "Card B"]);
+	});
+});

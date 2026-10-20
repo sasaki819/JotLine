@@ -83,6 +83,9 @@ const ja: typeof en = {
 	NOTICE_SPLIT_HINT: "分割するにはテキスト内にカーソルを置いてください",
 	NOTICE_IMAGE_ATTACHED: "画像をノートに添付しました",
 	NOTICE_IMAGE_FAIL: "画像の保存に失敗しました",
+	NOTICE_DROP_SAME_FILE: "同じファイルにはドロップできません",
+	NOTICE_MOVE_SOURCE_NOT_REMOVED: "コピーしましたが、元の内容を削除できませんでした",
+	NOTICE_DROP_INSERT_UNCONFIRMED: "挿入を確認できなかったため、元の内容は残しました",
 
 	// Settings & Commands
 	CMD_OPEN_SCRATCHPAD: "JotLine スクラッチパッドを開く",

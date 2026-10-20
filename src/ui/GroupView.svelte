@@ -16,11 +16,12 @@
 	 * 4. 複数選択状態とイベントの中継:
 	 *    - 親コンポーネント（App.svelte）から渡された選択状態やイベントハンドラをCardViewへ中継。
 	 */
-	import { Notice, type App } from "obsidian";
+	import { Notice, Platform, type App } from "obsidian";
 	import type { JotGroup } from "../types";
 	import type { JotStore } from "../store";
 	import { icon } from "../utils/icon";
 	import { t } from "../i18n";
+	import { startDrag, endDrag, getDragSource, isCopyDrop, JOTLINE_DRAG_MIME, type DragSource } from "../dnd";
 	import CardView from "./CardView.svelte";
 
 	/** 表示対象のグループデータ */
@@ -37,6 +38,8 @@
 	export let onSelectCard: (cardId: string, event: MouseEvent) => void = () => {};
 	/** カード右クリック（コンテキストメニュー表示）時のコールバック関数 */
 	export let onContextMenuCard: (cardId: string, event: MouseEvent) => void = () => {};
+	/** ドラッグ対象のカードID一覧を求めるコールバック（CardViewへ中継） */
+	export let getDragCardIds: (cardId: string) => string[] = (cardId) => [cardId];
 
 	/** スレッドが折りたたまれているかどうかのフラグ */
 	let isCollapsed = false;
@@ -106,10 +109,38 @@
 	}
 
 	/**
+	 * スレッドヘッダーのドラッグ開始処理。
+	 * エディタや別ファイルのJotLineビューへのドラッグ用に、ドラッグセッションを開始し、
+	 * スレッドコピーと同じテキストを `text/plain` に設定します（並び替え用のJSONは設定しない）。
+	 */
+	function handleThreadDragStart(e: DragEvent) {
+		if (!e.dataTransfer) return;
+		// カード0枚のスレッドはドラッグの対象外（ヘッダーもドラッグ不可にしているが念のため）
+		if (group.cards.length === 0) return;
+		const text = store.exportGroup(group.id);
+		e.dataTransfer.setData(JOTLINE_DRAG_MIME, "thread");
+		e.dataTransfer.setData("text/plain", text);
+		e.dataTransfer.effectAllowed = "copyMove";
+		startDrag({
+			kind: "thread",
+			store,
+			filePath: store.file.path,
+			groupId: group.id,
+			name: group.name,
+			text,
+			contents: group.cards.map((c) => c.content.trim()),
+		});
+	}
+
+	/**
 	 * ドラッグオーバー時のハンドラ
 	 * 他のカードがこのグループ上にドラッグされた際にドロップ可能であることを示します。
 	 */
 	function handleDragOver(e: DragEvent) {
+		// JotLine・エディタ由来のドラッグ（ドラッグセッションがあるもの）だけを受け付ける。
+		// それ以外（カード編集欄の文字のドラッグなど）を受け付けると、ドロップしても何も追加されないのに、
+		// ブラウザ標準の「移動」で元の入力欄から文字が消えてしまうため。
+		if (!getDragSource()) return;
 		e.preventDefault();
 		if (e.dataTransfer) {
 			e.dataTransfer.dropEffect = "move";
@@ -126,8 +157,13 @@
 
 	/**
 	 * ドロップ時のハンドラ
-	 * ドラッグされたカードをこのグループの特定位置（または末尾）へ移動・挿入します。
-	 * 
+	 * ドラッグセッションに応じて、次のいずれかを行います。
+	 * - 同じビュー内のカード: 既存の並び替え（ドラッグしたカード1枚の移動）。同じビュー内のスレッドは何もしない
+	 * - 同じファイル（別ビュー、または同じファイルのエディタ）から: 何もせず通知
+	 * - 別ファイルのJotLineビューのカード・スレッド: このグループへ追加し、移動なら元を削除
+	 * - 別ファイルのエディタの選択テキスト: 1枚のカードとして追加し、移動なら元のノートから削除
+	 * - それ以外（他のアプリからのテキストなど）: 何もしない
+	 *
 	 * @param e ドラッグイベント
 	 * @param targetIndex 挿入先インデックス（省略時は末尾）
 	 */
@@ -135,17 +171,94 @@
 		e.preventDefault();
 		isDragOver = false;
 
+		// targetIndexが指定されていればその位置、なければグループ末尾に挿入
+		const index = targetIndex !== undefined ? targetIndex : group.cards.length;
+		const isCopy = isCopyDrop(e, Platform.isMacOS);
+		const source = getDragSource();
+
+		// JotLineのカード・スレッド（古いセッションを誤用しないよう、転送データの種類も確かめる）
+		if (source && source.kind !== "editor" && e.dataTransfer?.types.includes(JOTLINE_DRAG_MIME)) {
+			if (source.store === store) {
+				if (source.kind === "cards") {
+					await reorderDraggedCard(e, index);
+				}
+				return;
+			}
+			if (source.filePath === store.file.path) {
+				new Notice(t("NOTICE_DROP_SAME_FILE"));
+				return;
+			}
+			await dropFromJotLine(source, index, isCopy);
+			return;
+		}
+
+		// エディタの選択テキスト（ドロップされたテキストがセッションと一致する場合だけ）
+		if (source && source.kind === "editor") {
+			if (e.dataTransfer?.getData("text/plain") !== source.text) return;
+			if (source.filePath === store.file.path) {
+				new Notice(t("NOTICE_DROP_SAME_FILE"));
+				return;
+			}
+			await dropFromEditor(source, index, isCopy);
+			return;
+		}
+	}
+
+	/**
+	 * 同じビュー内でドラッグされたカード1枚を、このグループの指定位置へ並び替えます（既存の並び替え）。
+	 */
+	async function reorderDraggedCard(e: DragEvent, index: number) {
 		const rawData = e.dataTransfer?.getData("application/json");
 		if (!rawData) return;
 
 		try {
 			const data = JSON.parse(rawData);
 			const cardId = data.cardId;
-			// targetIndexが指定されていればその位置、なければグループ末尾に挿入
-			const index = targetIndex !== undefined ? targetIndex : group.cards.length;
 			await store.reorderCard(cardId, group.id, index);
 		} catch (err) {
 			console.error("Failed to parse dropped card data", err);
+		}
+	}
+
+	/**
+	 * 別ファイルのJotLineビューからドラッグされたカード・スレッドを追加し、移動なら元を削除します。
+	 * 追加に成功した場合だけ元を削除します（追加に失敗した場合は、ストアが書き込み失敗を通知済み）。
+	 */
+	async function dropFromJotLine(source: Exclude<DragSource, { kind: "editor" }>, index: number, isCopy: boolean) {
+		const inserted =
+			source.kind === "cards"
+				? await store.insertCards(group.id, index, source.contents)
+				: await store.insertThreadAfter(group.id, source.name, source.contents);
+		if (!inserted || isCopy) return;
+
+		const removed =
+			source.kind === "cards"
+				? await source.store.removeCards(source.cardIds)
+				: await source.store.removeGroup(source.groupId);
+		if (!removed) {
+			new Notice(t("NOTICE_MOVE_SOURCE_NOT_REMOVED"));
+		}
+	}
+
+	/**
+	 * 別ファイルのエディタからドラッグされた選択テキストを1枚のカードとして追加し、
+	 * 移動なら元のノートから選択範囲を削除します（エディタの編集として行うため、エディタのアンドゥで戻せる）。
+	 * 元の範囲の内容がドラッグ開始時から変わっている場合（エディタが閉じられた場合を含む）は削除しません。
+	 */
+	async function dropFromEditor(source: Extract<DragSource, { kind: "editor" }>, index: number, isCopy: boolean) {
+		const inserted = await store.insertCards(group.id, index, [source.text]);
+		if (!inserted || isCopy) return;
+
+		const { editor, from, to, text } = source;
+		try {
+			if (editor.getRange(from, to) !== text) {
+				new Notice(t("NOTICE_MOVE_SOURCE_NOT_REMOVED"));
+				return;
+			}
+			editor.replaceRange("", from, to);
+		} catch (err) {
+			console.error("JotLine: Failed to remove the dragged text from the editor", err);
+			new Notice(t("NOTICE_MOVE_SOURCE_NOT_REMOVED"));
 		}
 	}
 </script>
@@ -160,8 +273,14 @@
 	aria-label={group.name ? `Thread: ${group.name}` : "Unclassified Notes"}
 >
 	{#if group.name}
-		<!-- スレッドヘッダー（名前付きグループのみ表示） -->
-		<div class="jotline-group-header">
+		<!-- スレッドヘッダー（名前付きグループのみ表示。カードが1枚以上あり、スレッド名の編集中でなければドラッグ可能） -->
+		<!-- svelte-ignore a11y-no-static-element-interactions -->
+		<div
+			class="jotline-group-header"
+			draggable={!isRenaming && group.cards.length > 0}
+			on:dragstart={handleThreadDragStart}
+			on:dragend={endDrag}
+		>
 			<div class="jotline-group-title">
 				<!-- アコーディオン展開/折りたたみボタン -->
 				<button
@@ -257,6 +376,7 @@
 						isSelected={selectedCardIds.has(card.id)}
 						{onSelectCard}
 						{onContextMenuCard}
+						{getDragCardIds}
 					/>
 				</div>
 			{/each}

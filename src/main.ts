@@ -1,10 +1,11 @@
-import { Plugin, Notice, TFile, WorkspaceLeaf, Menu } from "obsidian";
+import { Plugin, Notice, TFile, WorkspaceLeaf, Menu, Platform, MarkdownView, type Editor, type MarkdownFileInfo } from "obsidian";
 import { get } from "svelte/store";
 import { DEFAULT_SETTINGS, JotLineSettings } from "./types";
 import { JotLineSettingTab } from "./settings";
 import { JotLineView, VIEW_TYPE_JOTLINE } from "./ui/JotLineView";
 import { JOTLINE_README_CONTENT } from "./templates/readmeTemplate";
 import { t } from "./i18n";
+import { getDragSource, startDrag, endDrag, isCopyDrop, JOTLINE_DRAG_MIME, type DragSource } from "./dnd";
 
 /**
  * JotLine プラグインのメインクラス。
@@ -97,6 +98,18 @@ export default class JotLinePlugin extends Plugin {
 			})
 		);
 
+		// JotLineのカード・スレッドがエディタへドロップされたときの処理（同じファイルの禁止、移動時の元の削除）
+		this.registerEvent(
+			this.app.workspace.on("editor-drop", (evt, editor, info) => {
+				this.handleEditorDrop(evt, editor, info);
+			})
+		);
+
+		// エディタからのドラッグの開始・終了を監視（ドラッグセッションの記録・破棄）。
+		// キャプチャ段階で受けるため、JotLineのカード・スレッドのドラッグ開始処理（バブリング段階）より先に実行される。
+		this.registerDomEvent(document, "dragstart", (evt) => this.handleDocumentDragStart(evt), { capture: true });
+		this.registerDomEvent(document, "dragend", () => endDrag(), { capture: true });
+
 		console.log("JotLine plugin loaded");
 	}
 
@@ -128,6 +141,81 @@ export default class JotLinePlugin extends Plugin {
 			}
 		}
 		return true;
+	}
+
+	/**
+	 * ドラッグの開始を監視し、エディタ（ソースモード／ライブプレビュー）で選択したテキストのドラッグであれば、
+	 * ドラッグセッションを開始します。
+	 *
+	 * まず前のセッションを破棄します。JotLineのカード・スレッドのドラッグの場合は、
+	 * この後に各コンポーネントがセッションを開始します。
+	 */
+	private handleDocumentDragStart(evt: DragEvent) {
+		endDrag();
+		const target = evt.target;
+		if (!(target instanceof Node)) return;
+
+		for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
+			const view = leaf.view;
+			if (!(view instanceof MarkdownView) || !view.containerEl.contains(target)) continue;
+			// 読み取りビューからのドラッグは対象外
+			if (view.getMode() !== "source" || !view.file) return;
+
+			const editor = view.editor;
+			const from = editor.getCursor("from");
+			const to = editor.getCursor("to");
+			const text = editor.getRange(from, to);
+			// 選択範囲が空（リンクやファイルのドラッグなど）は対象外
+			if (!text) return;
+
+			startDrag({ kind: "editor", editor, filePath: view.file.path, from, to, text });
+			return;
+		}
+	}
+
+	/**
+	 * JotLineのカード・スレッドがエディタへドロップされたときの処理。
+	 *
+	 * - 挿入そのものは、エディタの標準動作（`text/plain` の挿入）に任せます。
+	 * - ドロップ先がドラッグ元と同じファイルなら、挿入を止めて通知します。
+	 * - 移動（修飾キーなし）の場合は、エディタの挿入が終わった後で挿入を確かめ、元のJotLineビューから削除します。
+	 */
+	private handleEditorDrop(evt: DragEvent, editor: Editor, info: MarkdownView | MarkdownFileInfo) {
+		if (evt.defaultPrevented) return;
+		const source = getDragSource();
+		if (!source || source.kind === "editor") return;
+		if (!evt.dataTransfer?.types.includes(JOTLINE_DRAG_MIME)) return;
+
+		if (info.file?.path === source.filePath) {
+			evt.preventDefault();
+			new Notice(t("NOTICE_DROP_SAME_FILE"));
+			return;
+		}
+
+		if (isCopyDrop(evt, Platform.isMacOS)) return;
+
+		// エディタの挿入処理が終わった後で、挿入を確かめてから元を削除する
+		window.setTimeout(() => {
+			this.removeMovedSource(source, editor);
+		}, 0);
+	}
+
+	/**
+	 * エディタへ移動したJotLineのカード・スレッドを、元のJotLineビューから削除します。
+	 * 挿入したテキストが空の場合（何も挿入されない）や、エディタの内容に含まれていない場合は、元を削除しません。
+	 */
+	private async removeMovedSource(source: Exclude<DragSource, { kind: "editor" }>, editor: Editor) {
+		if (!source.text || !editor.getValue().includes(source.text)) {
+			new Notice(t("NOTICE_DROP_INSERT_UNCONFIRMED"));
+			return;
+		}
+		const removed =
+			source.kind === "cards"
+				? await source.store.removeCards(source.cardIds)
+				: await source.store.removeGroup(source.groupId);
+		if (!removed) {
+			new Notice(t("NOTICE_MOVE_SOURCE_NOT_REMOVED"));
+		}
 	}
 
 	/**

@@ -13,6 +13,9 @@ import {
 	renameGroup,
 	deleteGroupDoc,
 	moveCardInDoc,
+	insertCardsInDoc,
+	insertGroupAfterInDoc,
+	removeCardsFromDoc,
 } from "./parser";
 import { t } from "./i18n";
 import { UndoHistory } from "./history";
@@ -127,17 +130,89 @@ export class JotStore {
 	 * 現在のメモリ上のJotDocumentをMarkdownへシリアライズし、Vaultファイルへ一括上書き保存します。
 	 * 部分置換ではなく全体上書きを行うことで行ズレやマーカー破損を防ぎます。
 	 * 保存に成功したら、変更前の内容を1件の履歴として積みます（内容が変わらない場合は履歴にも積まず書き込みもしません）。
+	 *
+	 * @returns "saved"（保存した）／"failed"（書き込みに失敗した）／"unchanged"（内容が変わらず何もしなかった）
 	 */
-	private async save() {
+	private async save(): Promise<"saved" | "failed" | "unchanged"> {
 		const after = serializeJotDocument(get(this.doc));
-		if (after === this.currentText) return;
+		if (after === this.currentText) return "unchanged";
 
 		const before = this.currentText;
 		if (await this.writeFile(after)) {
 			this.history.record(before);
 			this.currentText = after;
 			this.updateHistoryState();
+			return "saved";
 		}
+		return "failed";
+	}
+
+	/**
+	 * ドキュメントを変更して保存し、成否を返します（ドラッグ＆ドロップの追加・削除用）。
+	 * 書き込みに失敗した場合は、表示をファイルの内容（変更前）に戻します。
+	 * 失敗した変更が表示に残ったまま次の操作で保存され、意図しない追加・削除が起きるのを防ぐためです。
+	 *
+	 * @param mutate ドキュメントを変更する関数（変更した場合は true を返す）
+	 * @returns 変更を保存できた場合は true（変更対象がない場合・書き込みに失敗した場合は false）
+	 */
+	private async applyChange(mutate: (doc: JotDocument) => boolean): Promise<boolean> {
+		let changed = false;
+		this.doc.update((current) => {
+			changed = mutate(current);
+			return current;
+		});
+		if (!changed) return false;
+
+		const result = await this.save();
+		if (result === "failed") {
+			this.doc.set(parseJotDocument(this.currentText));
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * 指定したグループの指定位置に、本文ごとに新しいカードを追加して保存します。
+	 *
+	 * @param groupId 追加先のグループID
+	 * @param index 追加位置（グループ内のインデックス）
+	 * @param contents 追加するカードの本文
+	 * @returns 保存できた場合は true
+	 */
+	async insertCards(groupId: string, index: number, contents: string[]): Promise<boolean> {
+		return this.applyChange((doc) => insertCardsInDoc(doc, groupId, index, contents));
+	}
+
+	/**
+	 * 指定したグループの直後に、新しいスレッドを追加して保存します。
+	 *
+	 * @param afterGroupId このグループの直後に追加する
+	 * @param name スレッド名
+	 * @param contents スレッドに含めるカードの本文
+	 * @returns 保存できた場合は true
+	 */
+	async insertThreadAfter(afterGroupId: string, name: string, contents: string[]): Promise<boolean> {
+		return this.applyChange((doc) => insertGroupAfterInDoc(doc, afterGroupId, name, contents));
+	}
+
+	/**
+	 * 指定したカードを削除して保存します（通知は出しません）。
+	 *
+	 * @param cardIds 削除するカードIDのリスト
+	 * @returns 保存できた場合は true（対象のカードがない場合は false）
+	 */
+	async removeCards(cardIds: string[]): Promise<boolean> {
+		return this.applyChange((doc) => removeCardsFromDoc(doc, cardIds));
+	}
+
+	/**
+	 * 指定したグループを所属カードごと削除して保存します。
+	 *
+	 * @param groupId 削除するグループID
+	 * @returns 保存できた場合は true（対象のグループがない場合は false）
+	 */
+	async removeGroup(groupId: string): Promise<boolean> {
+		return this.applyChange((doc) => deleteGroupDoc(doc, groupId));
 	}
 
 	/**

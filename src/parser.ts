@@ -455,6 +455,86 @@ export function moveCardInDoc(doc: JotDocument, cardId: string, direction: "up" 
 	return false;
 }
 
+/**
+ * 本文の配列から新しいカードの配列を作ります（前後の空白を除き、空の本文は除外）。
+ */
+function createCards(contents: string[]): JotCard[] {
+	return contents
+		.map((content) => content.trim())
+		.filter((content) => content.length > 0)
+		.map((content) => ({ id: generateId(), content }));
+}
 
+/**
+ * 指定したグループの指定位置に、本文ごとに新しいカードを挿入します。
+ * ドラッグ＆ドロップで他のファイルからカードやテキストを受け取るときに使います。
+ *
+ * @param doc JotDocument ドキュメント
+ * @param groupId 挿入先のグループID
+ * @param index 挿入位置（グループ内のインデックス。範囲外は先頭または末尾に丸める）
+ * @param contents 挿入するカードの本文（前後の空白は除去。空の本文は無視）
+ * @returns 1枚以上挿入した場合は true
+ */
+export function insertCardsInDoc(doc: JotDocument, groupId: string, index: number, contents: string[]): boolean {
+	const group = doc.groups.find((g) => g.id === groupId);
+	if (!group) return false;
+	const cards = createCards(contents);
+	if (cards.length === 0) return false;
+	const at = Math.max(0, Math.min(index, group.cards.length));
+	group.cards.splice(at, 0, ...cards);
+	return true;
+}
 
+/**
+ * 指定したグループの直後に、新しいスレッドグループを挿入します。
+ * ドラッグ＆ドロップで他のファイルからスレッドを受け取るときに使います。
+ *
+ * @param doc JotDocument ドキュメント
+ * @param afterGroupId このグループの直後に挿入する
+ * @param name スレッド名（前後の空白は除去。空は不可）
+ * @param contents スレッドに含めるカードの本文（前後の空白は除去。空の本文は無視）
+ * @returns 挿入した場合は true
+ */
+export function insertGroupAfterInDoc(
+	doc: JotDocument,
+	afterGroupId: string,
+	name: string,
+	contents: string[]
+): boolean {
+	const idx = doc.groups.findIndex((g) => g.id === afterGroupId);
+	if (idx === -1) return false;
+	const trimmedName = name.trim();
+	if (!trimmedName) return false;
+	const cards = createCards(contents);
+	if (cards.length === 0) return false;
+	doc.groups.splice(idx + 1, 0, { id: generateId(), name: trimmedName, cards });
+	return true;
+}
 
+/**
+ * 指定したカードを一括削除します。
+ * カードが0枚になったスレッドグループ（名前付き）は削除し、未分類グループは空でも残します。
+ * 全グループがなくなった場合は空の未分類グループを1つ確保します。
+ *
+ * @param doc JotDocument ドキュメント
+ * @param cardIds 削除するカードIDのリスト
+ * @returns 1枚以上削除した場合は true
+ */
+export function removeCardsFromDoc(doc: JotDocument, cardIds: string[]): boolean {
+	const idSet = new Set(cardIds);
+	let removed = false;
+	for (let g = doc.groups.length - 1; g >= 0; g--) {
+		const group = doc.groups[g];
+		const remaining = group.cards.filter((c) => !idSet.has(c.id));
+		if (remaining.length === group.cards.length) continue;
+		removed = true;
+		group.cards = remaining;
+		if (group.cards.length === 0 && group.name !== "") {
+			doc.groups.splice(g, 1);
+		}
+	}
+	if (doc.groups.length === 0) {
+		doc.groups.push({ id: generateId(), name: "", cards: [] });
+	}
+	return removed;
+}

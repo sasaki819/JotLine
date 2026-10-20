@@ -10,10 +10,15 @@
 	 * 5. 既存カードに対する返信スレッドの作成（`💬`）。
 	 * 6. 単体Markdownコピー（`📋`）および削除（`🗑️`）。
 	 * 7. ドラッグハンドル（`⠿`）によるHTML5 Drag & Drop並び替え。
+	 *    あわせて、エディタや別ファイルのJotLineビューへのドラッグ用に、ドラッグセッションと `text/plain` を設定する
+	 *    （複数選択中は選択中の全カードが対象）。
 	 * 8. 単一・複数選択ハイライト（`.is-selected`）と右クリックメニューイベント通知。
 	 */
 	import { onMount, onDestroy } from "svelte";
+	import { get } from "svelte/store";
 	import { App, Component, MarkdownRenderer, Notice } from "obsidian";
+	import { exportToPureMarkdown } from "../parser";
+	import { startDrag, endDrag, JOTLINE_DRAG_MIME } from "../dnd";
 	import type { JotCard } from "../types";
 	import type { JotStore } from "../store";
 	import { icon } from "../utils/icon";
@@ -38,6 +43,8 @@
 	export let onSelectCard: (cardId: string, event: MouseEvent) => void = () => {};
 	/** カード右クリック時のコンテキストメニュー表示通知コールバック */
 	export let onContextMenuCard: (cardId: string, event: MouseEvent) => void = () => {};
+	/** ドラッグ対象のカードID一覧を求めるコールバック（複数選択中は選択中の全カード） */
+	export let getDragCardIds: (cardId: string) => string[] = (cardId) => [cardId];
 
 	/** インライン編集モード中フラグ */
 	let isEditing = false;
@@ -200,16 +207,42 @@
 	}
 
 	/**
-	 * HTML5 Drag & Drop 開始処理。カードIDと所属グループIDをJSONデータとして転送設定します。
+	 * HTML5 Drag & Drop 開始処理。
+	 * - 同じビュー内の並び替え用に、カードIDと所属グループIDをJSONデータとして設定します。
+	 * - エディタや別ファイルのJotLineビューへのドラッグ用に、ドラッグセッションを開始し、
+	 *   Markdownコピーと同じテキストを `text/plain` に設定します（複数選択中は選択中の全カード）。
+	 * - カードの編集中・返信欄を開いている間は、カード自体をドラッグ不可にしています（`draggable` 属性）。
+	 *   Chromium はドラッグ可能な親要素の中の入力欄で文字をドラッグすると親要素ごとドラッグするため、
+	 *   入力欄の文字のドラッグをカードのドラッグとして扱わないようにするためです。
+	 * - 編集中・返信欄を開いている間に届いた dragstart は、編集欄・返信欄の中の文字のドラッグ
+	 *   （親のカードへバブリングしてきたもの）なので、何もせず入力欄の標準動作に任せます。
+	 *   起点の要素での判定では防げなかったため、カードの状態で判定します。
 	 */
 	function handleDragStart(e: DragEvent) {
-		if (e.dataTransfer) {
-			e.dataTransfer.setData("application/json", JSON.stringify({
-				cardId: card.id,
-				sourceGroupId: groupId,
-			}));
-			e.dataTransfer.effectAllowed = "move";
-		}
+		if (!e.dataTransfer) return;
+		if (isEditing || isReplying) return;
+		const target = e.target;
+		if (target instanceof Element && target.closest("textarea, input")) return;
+		e.dataTransfer.setData("application/json", JSON.stringify({
+			cardId: card.id,
+			sourceGroupId: groupId,
+		}));
+
+		const cardIds = getDragCardIds(card.id);
+		const idSet = new Set(cardIds);
+		const cards = get(store.doc).groups.flatMap((g) => g.cards).filter((c) => idSet.has(c.id));
+		const text = exportToPureMarkdown(cards);
+		e.dataTransfer.setData(JOTLINE_DRAG_MIME, "cards");
+		e.dataTransfer.setData("text/plain", text);
+		e.dataTransfer.effectAllowed = "copyMove";
+		startDrag({
+			kind: "cards",
+			store,
+			filePath: store.file.path,
+			cardIds: cards.map((c) => c.id),
+			text,
+			contents: cards.map((c) => c.content.trim()),
+		});
 	}
 </script>
 
@@ -220,8 +253,9 @@
 	class="jotline-card {isSelected ? 'is-selected' : ''}"
 	role="article"
 	aria-label="Note card"
-	draggable="true"
+	draggable={!isEditing && !isReplying}
 	on:dragstart={handleDragStart}
+	on:dragend={endDrag}
 	on:click={(e) => onSelectCard(card.id, e)}
 	on:contextmenu={(e) => onContextMenuCard(card.id, e)}
 >
