@@ -1,11 +1,11 @@
 ---
 id: "0005"
 title: "GitLab CI でテスト・ビルドを自動化し、ビルド結果をアーティファクトとリリースで管理する"
-status: backlog        # backlog / ready / in-progress / done / dropped
+status: ready        # backlog / ready / in-progress / done / dropped
 priority: medium       # high / medium / low
 owner: ""
 created: 2026-10-21
-spec: ""               # 例: specs/0012-login-rework/（Spec を作らない場合は空）
+spec: "specs/0005-ci-build-and-release/"            # 例: specs/0012-login-rework/（Spec を作らない場合は空）
 discussions: []        # 例: [discussions/2026-10-15-auth-ideas.md]
 ---
 ## 概要

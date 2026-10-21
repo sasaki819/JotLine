@@ -6,7 +6,7 @@
 
 | ID | タイトル | status | priority | owner | Spec |
 |----|----------|--------|----------|-------|------|
-| [0005](backlog/items/0005-ci-build-and-release.md) | GitLab CI でテスト・ビルドを自動化し、ビルド結果をアーティファクトとリリースで管理する | backlog | medium |  |  |
+| [0005](backlog/items/0005-ci-build-and-release.md) | GitLab CI でテスト・ビルドを自動化し、ビルド結果をアーティファクトとリリースで管理する | ready | medium |  | [specs/0005-ci-build-and-release/](specs/0005-ci-build-and-release/) |
 
 ## 完了・中止
 
