@@ -6,7 +6,7 @@ Obsidian のコミュニティプラグイン。チャット風の入力バー�
 
 ## 技術スタック
 
-TypeScript（ES2022）、Svelte 4、Obsidian Plugin API（minAppVersion 1.0.0、デスクトップ／モバイル対応）、esbuild + esbuild-svelte（CSS をインライン化した `main.js` 単一バンドル）、Vitest、Node.js / npm
+TypeScript（ES2022）、Svelte 4、Obsidian Plugin API（minAppVersion 1.1.0、デスクトップ／モバイル対応）、esbuild + esbuild-svelte（CSS をインライン化した `main.js` 単一バンドル）、Vitest、Node.js / npm
 
 ## コマンド
 

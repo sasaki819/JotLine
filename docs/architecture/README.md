@@ -17,3 +17,4 @@ JotLine の設計・仕様は、関心事ごとに次の文書に分けていま
 | [02.Data-Format-Spec.md](02.Data-Format-Spec.md) | Markdown と HTML コメントマーカーによる保存形式、パース・シリアライズ・エクスポートの規則、フェイルセーフ |
 | [03.UI-UX-Specification.md](03.UI-UX-Specification.md) | 画面レイアウト、入力・カード・スレッドの操作、複数選択、エクスポート、キーボードショートカット、アンドゥ／リドゥ、ドラッグ＆ドロップによる移動・コピー |
 | [04.Non-Functional.md](04.Non-Functional.md) | ファイル書き込みの安全性、外部変更との競合制御、多言語対応、AI エージェント向け仕様書、ドラッグ＆ドロップによる移動の安全性、パフォーマンスとリソース管理 |
+| [05.Build-and-Release.md](05.Build-and-Release.md) | GitLab CI のパイプライン（対象、ステージとジョブ）、ビルド結果のアーティファクト、リリース（リリース前チェック、Package Registry、Releases）、バージョンと変更履歴 |
