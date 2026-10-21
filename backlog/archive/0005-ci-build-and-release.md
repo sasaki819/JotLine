@@ -1,7 +1,7 @@
 ---
 id: "0005"
 title: "GitLab CI でテスト・ビルドを自動化し、ビルド結果をアーティファクトとリリースで管理する"
-status: ready        # backlog / ready / in-progress / done / dropped
+status: done        # backlog / ready / in-progress / done / dropped
 priority: medium       # high / medium / low
 owner: ""
 created: 2026-10-21
