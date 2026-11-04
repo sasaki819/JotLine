@@ -28,6 +28,6 @@
 
 ## 関連
 
-- Item: [backlog/items/0006-append-main-input-card-at-end.md](../../backlog/items/0006-append-main-input-card-at-end.md)
+- Item: [backlog/archive/0006-append-main-input-card-at-end.md](../../backlog/archive/0006-append-main-input-card-at-end.md)
 - Discussion: なし
 - ADR: なし

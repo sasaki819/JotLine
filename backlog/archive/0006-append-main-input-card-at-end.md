@@ -1,7 +1,7 @@
 ---
 id: "0006"
 title: "メイン入力欄から追加したカードをファイル末尾に保存する"
-status: in-progress    # backlog / ready / in-progress / done / dropped
+status: done           # backlog / ready / in-progress / done / dropped
 priority: medium       # high / medium / low
 owner: ""
 created: 2026-11-04
