@@ -19,7 +19,7 @@
 
 ### 編集の開始
 
-既存の編集開始操作で `editingName` に現在の名前を設定し、`isRenaming` を true にする。
+既存の編集開始操作で `editingName` に現在の名前を設定し、`isRenaming` を true にする。入力欄の Svelte action で DOM への挿入時に `focus()` を呼ぶ。ダブルクリックと編集ボタンのどちらから開始しても、追加クリックなしでキー操作と blur を受け取れるようにする。
 
 ### 確定
 
@@ -61,7 +61,8 @@
 ## テスト方針
 
 - `npm run build`、`npm test`、`npx tsc --noEmit` を実行し、既存のビルド・データ操作・保存処理に回帰がないことを確認する。
-- Obsidian 上で次の手動確認を行い、結果を progress に記録する。既存の Vitest 設定は Svelte の DOM テスト環境を持たないため、ブラウザーのフォーカス遷移は実画面で確認する。
+- `scripts/group-rename.test.mjs` で、production と同じ esbuild-svelte を使ってコンポーネントをコンパイルし、jsdom 上で実際の JotStore と接続する。編集開始直後のフォーカス、Enter／blur の保存、Esc のキャンセル、保存待ちでの重複防止、IME を検証する。テスト側では入力欄を手動でフォーカスしない。
+- Obsidian 上でも次の手動確認を行い、結果を progress に記録する。jsdom の検証は Obsidian 実画面とモバイルの確認を代替しない。
 
 | 操作 | 期待する結果 | 対応する受入基準 |
 |---|---|---|

@@ -63,6 +63,11 @@
 		isRenaming = true;
 	}
 
+	/** 編集欄が DOM に挿入されたら、キー操作と blur を受け取れるようにする。 */
+	function focusRenameInput(node: HTMLInputElement) {
+		node.focus();
+	}
+
 	/**
 	 * 変更したグループ名を保存する
 	 */
@@ -300,6 +305,7 @@
 							type="text"
 							class="jotline-rename-input"
 							bind:value={editingName}
+							use:focusRenameInput
 							on:blur={saveRename}
 							on:keydown={(e) => {
 								if (e.isComposing || e.keyCode === 229) return;

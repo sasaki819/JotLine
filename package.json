@@ -24,6 +24,7 @@
     "builtin-modules": "^4.0.0",
     "esbuild": "^0.24.0",
     "esbuild-svelte": "^0.8.2",
+    "jsdom": "^26.1.0",
     "obsidian": "^1.7.2",
     "svelte": "^4.2.19",
     "svelte-preprocess": "^5.1.4",
