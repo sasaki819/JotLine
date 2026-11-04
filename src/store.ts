@@ -298,16 +298,20 @@ export class JotStore {
 	 * 新しいメモカードを追加します。
 	 * 
 	 * @param content カードの本文テキスト
-	 * @param targetGroupId 追加先のグループID（省略時は未分類グループに追加）
+	 * @param targetGroupId 追加先のグループID（省略時はドキュメント末尾の未分類グループに追加）
 	 */
 	async addCard(content: string, targetGroupId?: string) {
 		const text = content.trim();
 		if (!text) return;
 
 		this.doc.update((current) => {
-			let group = targetGroupId
-				? current.groups.find((g) => g.id === targetGroupId)
-				: current.groups.find((g) => g.name === "");
+			let group: JotGroup | undefined;
+			if (targetGroupId) {
+				group = current.groups.find((g) => g.id === targetGroupId);
+			} else {
+				const lastGroup = current.groups.at(-1);
+				group = lastGroup?.name === "" ? lastGroup : undefined;
+			}
 
 			if (!group) {
 				group = {

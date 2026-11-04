@@ -96,6 +96,76 @@ function ids(store: JotStore) {
 	};
 }
 
+describe("JotStore addCard placement", () => {
+	it("appends an unclassified card after existing groups and preserves their contents on reload", async () => {
+		const { store, fake } = await createStore();
+		const before = docOf(store).groups.map((group) => ({
+			name: group.name,
+			cards: group.cards.map((card) => card.content),
+		}));
+
+		await store.addCard("New card");
+
+		expect(fake.getContent()).toBe(`${SAMPLE}\n<!-- group -->\n<!-- card -->\nNew card\n`);
+		const expected = [...before, { name: "", cards: ["New card"] }];
+		expect(docOf(store).groups.map((group) => ({
+			name: group.name,
+			cards: group.cards.map((card) => card.content),
+		}))).toEqual(expected);
+
+		const reloaded = await createStore(fake.getContent());
+		expect(docOf(reloaded.store).groups.map((group) => ({
+			name: group.name,
+			cards: group.cards.map((card) => card.content),
+		}))).toEqual(expected);
+	});
+
+	it("creates an unclassified group after a file containing only a named group", async () => {
+		const initial = "<!-- group: topic -->\n<!-- card -->\nExisting\n";
+		const { store, fake } = await createStore(initial);
+
+		await store.addCard("New card");
+
+		expect(fake.getContent()).toBe(`${initial}\n<!-- group -->\n<!-- card -->\nNew card\n`);
+		expect(docOf(store).groups.map((group) => group.name)).toEqual(["topic", ""]);
+	});
+
+	it("reuses the final unclassified group for consecutive cards", async () => {
+		const { store, fake } = await createStore(SAMPLE);
+
+		await store.addCard("First");
+		await store.addCard("Second");
+
+		expect(docOf(store).groups.map((group) => group.name)).toEqual(["", "topic", ""]);
+		expect(docOf(store).groups.at(-1)?.cards.map((card) => card.content)).toEqual(["First", "Second"]);
+		expect(fake.getContent()).toBe(`${SAMPLE}\n<!-- group -->\n<!-- card -->\nFirst\n\n<!-- card -->\nSecond\n`);
+	});
+
+	it.each([
+		["an unclassified group", "<!-- group -->\n<!-- card -->\nExisting\n", ["Existing", "New card"]],
+		["an empty file", "", ["New card"]],
+	])("appends to %s", async (_case, initial, expectedCards) => {
+		const { store, fake } = await createStore(initial);
+
+		await store.addCard("New card");
+
+		expect(docOf(store).groups.map((group) => group.name)).toEqual([""]);
+		expect(docOf(store).groups[0].cards.map((card) => card.content)).toEqual(expectedCards);
+		const reloaded = await createStore(fake.getContent());
+		expect(docOf(reloaded.store).groups[0].cards.map((card) => card.content)).toEqual(expectedCards);
+	});
+
+	it("still adds to a specified group", async () => {
+		const { store } = await createStore();
+		const targetGroupId = docOf(store).groups[0].id;
+
+		await store.addCard("New card", targetGroupId);
+
+		expect(docOf(store).groups.map((group) => group.name)).toEqual(["", "topic"]);
+		expect(docOf(store).groups[0].cards.map((card) => card.content)).toEqual(["Card A", "Card B", "New card"]);
+	});
+});
+
 describe("JotStore undo / redo", () => {
 	beforeEach(() => {
 		vi.useFakeTimers();
