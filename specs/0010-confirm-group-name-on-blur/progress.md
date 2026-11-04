@@ -42,6 +42,7 @@
 - 追加の指示「編集開始時に既存のテキストを全選択する」を本日の human Review に accepted として記録した。入力欄のマウント時に focus() に続けて select() を呼び出すよう変更した。
 - requirements に AC6 を追加して design に反映した。ダブルクリック・編集ボタン双方の選択範囲と、選択した名前全体を置き換えて保存できることを DOM テストで確認し、AC6 にチェックを付けた。
 - 検証: `npm run build`、`npm test`（8ファイル・100テスト）、`npx tsc --noEmit`、`bash tools/ai-standard/check-docs.sh` が全て成功した。
+- 全選択の修正を `871c0d2` にコミットし、本日の Review の R1 を fixed に更新した。
 
 ### 判断とその理由
 
