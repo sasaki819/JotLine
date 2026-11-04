@@ -67,19 +67,22 @@
 	 * 変更したグループ名を保存する
 	 */
 	async function saveRename() {
+		if (!isRenaming) return;
 		const newName = editingName.trim();
-		if (newName && newName !== group.name) {
-			await store.renameGroup(group.id, newName);
-		}
+		const groupId = group.id;
+		// 保存待ちや入力欄の削除に伴う blur からの再実行を防ぐ。
 		isRenaming = false;
+		if (newName && newName !== group.name) {
+			await store.renameGroup(groupId, newName);
+		}
 	}
 
 	/**
 	 * グループ名変更をキャンセルし、元の名前に戻す
 	 */
 	function cancelRename() {
-		editingName = group.name;
 		isRenaming = false;
+		editingName = group.name;
 	}
 
 	/**
@@ -297,13 +300,13 @@
 							type="text"
 							class="jotline-rename-input"
 							bind:value={editingName}
+							on:blur={saveRename}
 							on:keydown={(e) => {
+								if (e.isComposing || e.keyCode === 229) return;
 								if (e.key === "Enter") saveRename();
 								else if (e.key === "Escape") cancelRename();
 							}}
 						/>
-						<button class="clickable-icon" title={t("SAVE")} on:click={saveRename}>✓</button>
-						<button class="clickable-icon" title={t("CANCEL")} on:click={cancelRename}>✕</button>
 					</div>
 				{:else}
 					<!-- スレッド名ラベル（ダブルクリックまたは編集ボタンで変更可能） -->
