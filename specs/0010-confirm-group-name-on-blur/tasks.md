@@ -17,6 +17,6 @@
 - [x] 正本ドキュメント（docs/architecture/）へ design の内容を反映 (after: 2)
   - 完了条件: `docs/architecture/03.UI-UX-Specification.md` に、ボタンの削除、Enter／フォーカスアウトによる確定、Esc によるキャンセルを反映している。
   - 検証コマンド: `bash tools/ai-standard/check-docs.sh`
-- [ ] ADR の要否判断（必要なら作成） (after: 2)
+- [x] ADR の要否判断（必要なら作成） (after: 2)
   - 完了条件: 要否と理由を progress.md に記載し、必要なら templates/adr.md から docs/adr/ に ADR を作成している。
   - 検証コマンド: `bash tools/ai-standard/check-docs.sh`
