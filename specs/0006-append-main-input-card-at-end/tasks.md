@@ -14,6 +14,6 @@
 - [x] 正本ドキュメント（docs/architecture/）へ design の内容を反映 (after: 1)
   - 完了条件: `docs/architecture/03.UI-UX-Specification.md` に、メイン入力欄からのカードがファイル末尾の未分類グループへ追加される規則を反映する。
   - 検証コマンド: `bash tools/ai-standard/check-docs.sh`
-- [ ] ADR の要否判断（必要なら作成） (after: 1)
+- [x] ADR の要否判断（必要なら作成） (after: 1)
   - 完了条件: 要否と理由を `progress.md` に記載し、必要なら `docs/adr/` に ADR を作成している。
   - 検証コマンド: `bash tools/ai-standard/check-docs.sh`
