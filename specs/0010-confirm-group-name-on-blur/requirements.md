@@ -32,7 +32,7 @@
 
 ## 関連
 
-- Item: [backlog/items/0010-confirm-group-name-on-blur.md](../../backlog/items/0010-confirm-group-name-on-blur.md)
+- Item: [backlog/archive/0010-confirm-group-name-on-blur.md](../../backlog/archive/0010-confirm-group-name-on-blur.md)
 - Discussion: なし
 - ADR: なし
 - 既存仕様: [UI・UX仕様書](../../docs/architecture/03.UI-UX-Specification.md)

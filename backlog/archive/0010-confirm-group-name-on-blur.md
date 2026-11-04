@@ -1,7 +1,7 @@
 ---
 id: "0010"
 title: "グループ名の変更をフォーカスアウト時に確定する"
-status: in-progress    # backlog / ready / in-progress / done / dropped
+status: done           # backlog / ready / in-progress / done / dropped
 priority: medium       # high / medium / low
 owner: ""
 created: 2026-11-04

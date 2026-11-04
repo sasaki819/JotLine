@@ -48,6 +48,8 @@
 - 設計ドキュメント反映 Task 検証: `bash tools/ai-standard/check-docs.sh` と `git diff --check` が成功した。文書のみの変更であり、ビルド・テスト・型検査は再実行していない。
 - ADR 要否判断 Task: 新規 ADR は不要と判断した。判断の理由を以下に記録した。
 - ADR 要否判断 Task 検証: `bash tools/ai-standard/check-docs.sh` と `git diff --check` が成功した。
+- 別コンテキストのサブエージェントによる AI レビューが指摘なしで終了し、ユーザーが承認した。Review は `reviews/2026-11-05-impl-ai.md`。
+- close-item: 全 Task の完了、open／accepted の Finding がないこと、移動前の check-docs 成功を確認した。Item を done にして backlog/archive/ へ移動し、requirements の Item 参照先を更新した。BACKLOG.md を再生成し、移動後の check-docs 成功も確認した。
 
 ### 判断とその理由
 
@@ -58,5 +60,5 @@
 
 ### 中断点（次に何をすべきか）
 
-- tasks.md の全 Task が完了。次の工程は別コンテキストでの AI レビュー。Item の完了処理はまだ行っていない。
+- Item 0010 の完了処理は終了。DoD の全項目を満たし、Item は backlog/archive/ に移動済み。
 - 追加した全選択も Obsidian 実画面で確認済み。報告者名・重大度は従前の問い合わせへの回答待ち。
