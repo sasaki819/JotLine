@@ -66,6 +66,7 @@
 	/** 編集欄が DOM に挿入されたら、キー操作と blur を受け取れるようにする。 */
 	function focusRenameInput(node: HTMLInputElement) {
 		node.focus();
+		node.select();
 	}
 
 	/**

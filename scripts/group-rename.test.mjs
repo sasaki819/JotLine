@@ -82,6 +82,8 @@ describe("group rename focus and confirmation", () => {
 		const input = document.querySelector(".jotline-rename-input");
 		// Do not call focus here: editing must move focus without another click.
 		expect(document.activeElement).toBe(input);
+		expect(input.selectionStart).toBe(0);
+		expect(input.selectionEnd).toBe(input.value.length);
 		return input;
 	}
 	function type(input, value) {
@@ -91,6 +93,16 @@ describe("group rename focus and confirmation", () => {
 	function key(key, options = {}) {
 		document.activeElement.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key, bubbles: true, ...options }));
 	}
+
+	it.each([false, true])("selects the existing name for replacement (edit button: %s)", async (viaButton) => {
+		const input = await edit(viaButton);
+		input.setRangeText("Replacement", input.selectionStart, input.selectionEnd, "end");
+		input.dispatchEvent(new dom.window.Event("input", { bubbles: true }));
+		key("Enter");
+		await tick();
+		expect(vault.modify).toHaveBeenCalledTimes(1);
+		expect(vault.modify.mock.calls[0][1]).toContain("<!-- group: Replacement -->");
+	});
 
 	it("focuses on double-click and saves with Enter without a second click", async () => {
 		const input = await edit();
