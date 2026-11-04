@@ -14,7 +14,7 @@
 - [x] 2. 実画面でグループ名編集の受入基準を確認する (after: 1)
   - 完了条件: Obsidian 上で design.md のテスト方針にある手動確認を実施し、AC1〜AC5、IME 変換中の操作、デスクトップとモバイルでの操作結果を progress.md に記録している。フォーカスアウト後の保存は再読み込みで、重複防止は成功通知と Undo 1回で元に戻ることでも確認する。未実施の確認があればチェックを付けず、確認が必要な環境と項目を記録する。
   - 検証コマンド: `bash tools/ai-standard/check-docs.sh`（実画面での手動確認と併せて実施）
-- [ ] 正本ドキュメント（docs/architecture/）へ design の内容を反映 (after: 2)
+- [x] 正本ドキュメント（docs/architecture/）へ design の内容を反映 (after: 2)
   - 完了条件: `docs/architecture/03.UI-UX-Specification.md` に、ボタンの削除、Enter／フォーカスアウトによる確定、Esc によるキャンセルを反映している。
   - 検証コマンド: `bash tools/ai-standard/check-docs.sh`
 - [ ] ADR の要否判断（必要なら作成） (after: 2)
