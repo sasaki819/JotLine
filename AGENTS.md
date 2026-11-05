@@ -16,6 +16,14 @@ TypeScript（ES2022）、Svelte 4、Obsidian Plugin API（minAppVersion 1.1.0、
 
 <!-- プロジェクト固有のルールはこの位置（標準管理領域の外）に追記する。sync では変更されない。 -->
 
+## ブランチ運用
+
+- Item の作業開始前に `feature/<ID>-<slug>` ブランチを作成して切り替える。対象 Item の feature ブランチが既にある場合は、そのブランチで作業する。
+- コミット・push は対象の feature ブランチで行い、リモートにも同じ名前のブランチへ push する。
+- 「pushして」は対象の feature ブランチへの push と解釈する。
+- main への直接 push は、ユーザーが main を送信先として明示的に指定した場合のみ行う。
+- push 前に現在のブランチと送信先を確認する。
+
 <!-- ai-standard:begin -->
 <!-- この区間は ai-dev-standard の管理対象。直接編集せず、ai-dev-standard 側を更新して sync すること。 -->
 
