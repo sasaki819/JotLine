@@ -32,6 +32,6 @@ python3 -c 'import subprocess; r = subprocess.run(["git", "grep", "-nI", "-F", "
 - [x] マスタードキュメント（docs/architecture/）へ design の内容を反映 (after: 3)
   - 完了条件: `docs/architecture/` の用語が design の使い分けに一致していることを確認している。必要な追加反映を行い、Task 2 の用語更新のみで十分な場合は、追加反映が不要である理由を progress.md に記録している。
   - 検証コマンド: 共通の旧語残存検査、`bash tools/ai-standard/check-docs.sh`、`git diff --check`。
-- [ ] ADR の要否判断（必要なら作成） (after: 3)
+- [x] ADR の要否判断（必要なら作成） (after: 3)
   - 完了条件: 要否と理由を progress.md に記載し、必要なら templates/adr.md から docs/adr/ に ADR を作成している。作成した文書にも旧語が残っていない。
   - 検証コマンド: 共通の旧語残存検査、`bash tools/ai-standard/check-docs.sh`、`git diff --check`。
