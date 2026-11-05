@@ -1,8 +1,8 @@
-# 正本ドキュメント（docs/architecture/）
+# マスタードキュメント（docs/architecture/）
 
 このディレクトリには、システム全体の**最新の設計**を置きます。
 
-- 各 Spec の design.md は「その Item による変更分」の設計です。Item の完了時に、その内容をこのディレクトリの文書へ反映します（tasks.md の固定 Task「正本ドキュメント（docs/architecture/）へ design の内容を反映」）。
+- 各 Spec の design.md は「その Item による変更分」の設計です。Item の完了時に、その内容をこのディレクトリの文書へ反映します（tasks.md の固定 Task「マスタードキュメント（docs/architecture/）へ design の内容を反映」）。
 - ここにある文書は常に現在のシステムを表すように更新します。変更の経緯は Spec と ADR（`docs/adr/`）に残ります。
 - 文書の分け方（全体構成、コンポーネント別、データモデルなど）はプロジェクトで決めてください。
 

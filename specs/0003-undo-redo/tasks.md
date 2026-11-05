@@ -35,7 +35,7 @@
     - AC11: 複数選択中のアンドゥ／リドゥ、および外部変更で、選択が解除され選択バーが消える。
   - 完了条件: AC5〜AC11 がすべて確認され、結果が progress.md に記録されている。不具合があれば修正し、Task 2〜4 の検証コマンドを再実行している。
   - 検証コマンド: 手動確認（結果を progress.md に記録）。あわせて `npm run build`、`npm test`、`npx tsc --noEmit`
-- [x] 正本ドキュメント（docs/architecture/）へ design の内容を反映
+- [x] マスタードキュメント（docs/architecture/）へ design の内容を反映
   - 完了条件: design.md の内容が docs/architecture/ に反映されている（不要なら「不要」と理由を progress.md に記載）
   - 反映先の想定: `01.Architecture.md`（`JotStore` の履歴管理、コンポーネントの責務、コマンド）、`03.UI-UX-Specification.md`（ヘッダーのボタン、アンドゥ／リドゥの操作、選択の解除、キーボードショートカット一覧）、`04.Non-Functional.md`（外部変更の履歴化と、自己保存の判定）
 - [x] ADR の要否判断（必要なら作成）

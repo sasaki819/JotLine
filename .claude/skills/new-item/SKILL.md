@@ -25,7 +25,7 @@ description: Backlog に新しい Item を起票するとき（「〜を起票�
    - `discussions`：関連する Discussion のパスをインラインリストで（なければ `[]`）
    - 本文の「概要」「受入基準」。不明な点はユーザーに質問する
    - frontmatter の行末コメント（`# ...`）は残してよい
-4. Spec を作らない小規模な Item の場合は、「タスク」欄に作業をチェックボックスで書く。正本ドキュメントへの反映のタスクは残す。Spec を作る場合は「タスク」欄を空にしてよい。
+4. Spec を作らない小規模な Item の場合は、「タスク」欄に作業をチェックボックスで書く。マスタードキュメントへの反映のタスクは残す。Spec を作る場合は「タスク」欄を空にしてよい。
 5. `bash tools/ai-standard/backlog-index.sh`（Windows では `powershell -ExecutionPolicy Bypass -File tools/ai-standard/backlog-index.ps1`）を実行して `BACKLOG.md` を再生成する。
 6. `bash tools/ai-standard/check-docs.sh`（Windows は `.ps1`）を実行し、作成した Item に関する違反がないことを確認する。
 

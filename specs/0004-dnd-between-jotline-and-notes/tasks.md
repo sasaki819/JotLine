@@ -53,7 +53,7 @@
     - design の「実装時に確認すること」の4（エディタからのドラッグの検知と、選択範囲の取得）。
   - 完了条件: 上記がすべて確認され、結果が progress.md に記録されている。不具合があれば修正し、Task 5 の検証コマンドを再実行している。
   - 検証コマンド: 手動確認（結果を progress.md に記録）。あわせて `npm run build`、`npm test`、`npx tsc --noEmit`
-- [x] 正本ドキュメント（docs/architecture/）へ design の内容を反映
+- [x] マスタードキュメント（docs/architecture/）へ design の内容を反映
   - 完了条件: design.md の内容が docs/architecture/ に反映されている（不要なら「不要」と理由を progress.md に記載）
   - 反映先の想定: `01.Architecture.md`（`dnd.ts`、`main.ts` のイベント登録、`JotStore` の追加メソッド、`minAppVersion`）、`03.UI-UX-Specification.md`（ドラッグ＆ドロップの操作、移動とコピー、同じファイルの禁止、スレッドヘッダーのドラッグ）、`04.Non-Functional.md`（移動の順序と失敗時の扱い）。あわせて利用者向けの `README.md` にも追記する。
 - [x] ADR の要否判断（必要なら作成）

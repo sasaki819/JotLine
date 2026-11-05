@@ -34,7 +34,7 @@ AGENTS.md で lint コマンドに指定した `npx tsc --noEmit` が、既存�
   - `openScratchpad()` の変数 `leaf` に `WorkspaceLeaf | null | undefined` の型注釈を付けた（処理は変更なし）。
 - [x] `npx tsc --noEmit`、`npm run build`、`npm test` がすべて成功することを確認する
   - 3つとも成功（終了コード0、テスト20件成功）。ビルド結果の `main.js` は変更前のビルドとバイト単位で一致し、実行時の動作に変化がないことを確認した。
-- [x] 正本ドキュメントへの反映：不要。型検査の設定と型注釈のみの変更で、設計・仕様・動作に変更がなく、設計書（`doc/`、`docs/architecture/`）にも該当する記述がないため。
+- [x] マスタードキュメントへの反映：不要。型検査の設定と型注釈のみの変更で、設計・仕様・動作に変更がなく、設計書（`doc/`、`docs/architecture/`）にも該当する記述がないため。
 ## メモ
 
 - 型検査を無効化・緩和する変更（`skipLibCheck` や `// @ts-ignore` の追加）は行っていない。

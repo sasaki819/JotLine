@@ -25,7 +25,7 @@ description: Spec の tasks.md にある未完了の Task を1つ実装すると
 
 ## 固定 Task を選んだ場合
 
-- 「正本ドキュメントへ反映」：design.md の内容を `docs/architecture/` の該当文書に反映する。不要なら理由を progress.md に書いてチェックする。
+- 「マスタードキュメントへ反映」：design.md の内容を `docs/architecture/` の該当文書に反映する。不要なら理由を progress.md に書いてチェックする。
 - 「ADR の要否判断」：重要な設計判断があれば `templates/adr.md` から `docs/adr/NNNN-<slug>.md` を作成する（NNNN は既存の最大番号に1を足す）。要否と理由を progress.md に書く。
 
 ## 出力

@@ -35,7 +35,7 @@
     - design の「実装時に確認すること」のうち、`CI_JOB_TOKEN` でアップロードとリリースの作成ができること。
   - 完了条件: 上記がすべて確認され、結果と、確認に使ったタグ等の後始末が progress.md に記録されている。不具合があれば修正し、関連する Task の検証コマンドを再実行している。
   - 検証コマンド: GitLab 上での手動確認（結果を progress.md に記録）。あわせて `npm test`、`npx tsc --noEmit`、`npm run build`
-- [x] 正本ドキュメント（docs/architecture/）へ design の内容を反映
+- [x] マスタードキュメント（docs/architecture/）へ design の内容を反映
   - 完了条件: design.md の内容が docs/architecture/ に反映されている（不要なら「不要」と理由を progress.md に記載）
   - 反映先の想定: `01.Architecture.md` の技術スタック（CI）と、ビルド・リリースの仕組み（新しい節、または新しい文書）。`docs/architecture/README.md` の文書一覧。
 - [x] ADR の要否判断（必要なら作成）

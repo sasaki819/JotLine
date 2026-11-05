@@ -67,7 +67,7 @@ AIは優先順位を決めず、Finding の採否も判定しません（`AGENTS
 | `BACKLOG.md` | Item の一覧（自動生成） | backlog-index のみ。**手で編集しない** |
 | `specs/<ID>-<slug>/` | requirements / design / tasks / progress / reviews | AI |
 | `discussions/YYYY-MM-DD-<slug>.md` | 議論の記録 | AI（人の指示で） |
-| `docs/architecture/` | 全体の最新設計（正本） | AI（Item 完了時に反映） |
+| `docs/architecture/` | 全体の最新設計（マスター） | AI（Item 完了時に反映） |
 | `docs/adr/` | 重要な設計判断の記録 | AI（必要なとき） |
 
 ---
@@ -385,11 +385,11 @@ new-item スキルで起票して：「社員一覧 API がページングなし
 発見元は Item 0002 の作業中。
 ```
 
-### 8.5 固定 Task（正本反映・ADR）
+### 8.5 固定 Task（マスタードキュメント反映・ADR）
 
 tasks.md の末尾には、次の2つの固定 Task があります。
 
-- **正本ドキュメント（docs/architecture/）へ design の内容を反映**：design.md の内容を、全体の最新設計に取り込みます。
+- **マスタードキュメント（docs/architecture/）へ design の内容を反映**：design.md の内容を、全体の最新設計に取り込みます。
 - **ADR の要否判断（必要なら作成）**：後から「なぜこうしたのか」を説明する必要がある判断（ライブラリの選定、データ形式の決定など）があれば、ADR を作ります。
 
 この2つも implement-task で順に処理されます。反映先や ADR の内容は、人が確認してください。
@@ -400,7 +400,7 @@ Spec を作らない Item（例：0005）は、Item ファイルの「タスク�
 
 ```
 Item 0005 は Spec のない小規模な Item。backlog/items/0005-readme-setup.md のタスク欄に従って修正し、
-完了したタスクにチェックを入れてコミットして。正本ドキュメントへの反映が不要なら、理由をタスクに書いてチェックすること。
+完了したタスクにチェックを入れてコミットして。マスタードキュメントへの反映が不要なら、理由をタスクに書いてチェックすること。
 ```
 
 ---
@@ -499,7 +499,7 @@ close-item スキルで、Item 0002 の完了処理をして。
 
 AIは DoD を確認します。
 
-- tasks.md の全 Task にチェックが入っている（正本反映と ADR の要否判断を含む）。
+- tasks.md の全 Task にチェックが入っている（マスタードキュメント反映と ADR の要否判断を含む）。
 - reviews に `open` / `accepted` の Finding が残っていない。
 - check-docs が成功する。
 
@@ -560,7 +560,7 @@ git add BACKLOG.md
 
 AIは何本でも並列に動かせますが、Spec の承認、Finding の選別、人のレビューは人が行います。レビュー待ちが溜まってきたら、新しい Item に着手せず、レビューを先に進めてください。
 
-### ルール5：正本ドキュメントの衝突に注意する
+### ルール5：マスタードキュメントの衝突に注意する
 
 複数の Item が同じ `docs/architecture/` の文書を更新すると、マージで衝突します。後からマージする側で、両方の内容を統合してください。
 

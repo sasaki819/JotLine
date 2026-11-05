@@ -26,7 +26,7 @@ Discussion ──▶ Item ──▶ Spec ──▶ Task 実装 ──▶ AIレ�
 | Finding | Review 内の指摘1件 |
 | Discussion | Spec化前のブレインストーミングや議論の経緯記録。`discussions/` に置く |
 | ADR | Architecture Decision Record。重要な設計判断とその理由の記録。`docs/adr/` に置く |
-| 正本ドキュメント | システム全体の最新設計。`docs/architecture/` に置く。design の内容は Item 完了時にここへ反映する |
+| マスタードキュメント | システム全体の最新設計。`docs/architecture/` に置く。design の内容は Item 完了時にここへ反映する |
 | DoD | Definition of Done。Item を完了扱いにするための条件 |
 
 ## 運用フロー
@@ -47,7 +47,7 @@ Discussion ──▶ Item ──▶ Spec ──▶ Task 実装 ──▶ AIレ�
 
 ## DoD（Definition of Done）
 
-- tasks.md の全 Task にチェックが入っている（正本反映と ADR 要否判断を含む）。
+- tasks.md の全 Task にチェックが入っている（マスタードキュメント反映と ADR 要否判断を含む）。
 - 該当 Spec の `reviews/` 配下に、状態が open または accepted の Finding が残っていない。
 - check-docs が成功する。
 - Item の status が done になり、`backlog/archive/` に移動されている。
@@ -65,8 +65,8 @@ Discussion ──▶ Item ──▶ Spec ──▶ Task 実装 ──▶ AIレ�
 ### Spec（`specs/<ID>-<slug>/`）
 
 - `templates/spec/` の requirements.md、design.md、tasks.md、progress.md から作る。
-- design.md は「その Item による変更分」の設計。全体の最新設計（正本ドキュメント）は `docs/architecture/` にあり、Item 完了時に反映する。
-- tasks.md の末尾には「正本ドキュメントへの反映」と「ADR の要否判断」の2つの固定 Task を必ず含める。
+- design.md は「その Item による変更分」の設計。全体の最新設計（マスタードキュメント）は `docs/architecture/` にあり、Item 完了時に反映する。
+- tasks.md の末尾には「マスタードキュメントへの反映」と「ADR の要否判断」の2つの固定 Task を必ず含める。
 
 ### Review（`specs/<ID>-<slug>/reviews/YYYY-MM-DD-<target>-<ai|human>.md`）
 

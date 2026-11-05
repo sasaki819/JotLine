@@ -12,7 +12,7 @@ description: PR／MR のマージ前に Item の完了処理（DoD の確認、s
 ## 手順
 
 1. 対象 Item を読み、DoD を確認する。
-   - Spec がある場合：tasks.md の全 Task にチェックが入っている（「正本ドキュメントへ反映」「ADR の要否判断」を含む）。
+   - Spec がある場合：tasks.md の全 Task にチェックが入っている（「マスタードキュメントへ反映」「ADR の要否判断」を含む）。
    - Spec がない場合：Item 内のタスクに全てチェックが入っている。
    - 該当 Spec の `reviews/` 配下に、状態が `open` または `accepted` の Finding が残っていない。
    - check-docs が成功する（この時点では Item の移動前なので、その前提で実行する）。

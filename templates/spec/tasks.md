@@ -14,7 +14,7 @@
 - [ ] 2. <Task 名> (after: 1)
   - 完了条件:
   - 検証コマンド: `...`
-- [ ] 正本ドキュメント（docs/architecture/）へ design の内容を反映
+- [ ] マスタードキュメント（docs/architecture/）へ design の内容を反映
   - 完了条件: design.md の内容が docs/architecture/ に反映されている（不要なら「不要」と理由を progress.md に記載）
 - [ ] ADR の要否判断（必要なら作成）
   - 完了条件: 要否と理由を progress.md に記載し、必要なら docs/adr/ に ADR を作成している

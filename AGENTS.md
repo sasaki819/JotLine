@@ -44,7 +44,9 @@ TypeScript（ES2022）、Svelte 4、Obsidian Plugin API（minAppVersion 1.1.0、
 | Finding | Review 内の指摘1件 |
 | Discussion | Spec化前のブレインストーミングや議論の経緯記録。`discussions/` に置く |
 | ADR | Architecture Decision Record。重要な設計判断とその理由の記録。`docs/adr/` に置く |
-| 正本ドキュメント | システム全体の最新設計。`docs/architecture/` に置く。design の内容は Item 完了時にここへ反映する |
+| マスター | 唯一の本体・最新の基準となる文書や資材 |
+| 原本 | コピー・派生物を作成する元の文書や資材 |
+| マスタードキュメント | システム全体の最新設計。`docs/architecture/` に置く。design の内容は Item 完了時にここへ反映する |
 | DoD | Definition of Done。Item を完了扱いにするための条件（下記） |
 
 ## ディレクトリの役割
@@ -56,7 +58,7 @@ TypeScript（ES2022）、Svelte 4、Obsidian Plugin API（minAppVersion 1.1.0、
 | `backlog/archive/` | status が done / dropped の Item |
 | `specs/<ID>-<slug>/` | Spec（requirements.md、design.md、tasks.md、progress.md、`reviews/`） |
 | `discussions/` | Discussion（`YYYY-MM-DD-<slug>.md`）。作成後は更新しない |
-| `docs/architecture/` | 正本ドキュメント |
+| `docs/architecture/` | マスタードキュメント |
 | `docs/adr/` | ADR（`NNNN-<slug>.md`） |
 | `docs/ai-dev-standard-process.md` | 人間向けの運用フロー説明 |
 | `docs/ai-dev-standard-guide.md` | 人間向けの運用ガイド（プロンプト例付きのチュートリアル） |
@@ -82,7 +84,7 @@ TypeScript（ES2022）、Svelte 4、Obsidian Plugin API（minAppVersion 1.1.0、
 
 ## DoD
 
-- tasks.md の全 Task にチェックが入っている（正本反映と ADR 要否判断を含む）。
+- tasks.md の全 Task にチェックが入っている（マスタードキュメント反映と ADR 要否判断を含む）。
 - 該当 Spec の `reviews/` 配下に、状態が open または accepted の Finding が残っていない。
 - check-docs が成功する。
 - Item の status が done になり、`backlog/archive/` に移動されている。
