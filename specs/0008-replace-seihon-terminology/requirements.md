@@ -24,13 +24,13 @@
 
 ## 受入基準
 
-- [ ] AC1: 旧語の各使用箇所を文脈に応じて修正し、唯一の本体・最新の基準を指す場合は「マスター」、派生物の生成元を指す場合は「原本」とする。文書の意味と、完了済み Task・Review などの状態を維持する。
-- [ ] AC2: `docs/architecture/` を指す用語を「マスタードキュメント」に統一し、用語定義・固定 Task 名・説明・DoD・MR チェックリストの表現も一致させる。
-- [ ] AC3: `tools/ai-standard/manifest.txt` の管理対象は ai-dev-standard の管理元で修正し、sync で反映する。標準管理対象をプロジェクト側で直接編集しない。管理元と同期後の対象資材の両方に旧語が残っていないことを確認する。
-- [ ] AC4: AGENTS.md のプロジェクト固有欄（ブランチ運用など）を sync 後も維持し、`.agents/skills/` と `.claude/skills/` の対応する内容が一致する。
-- [ ] AC5: Git 管理対象のテキスト資材を隠しパスも含めて検索し、旧語が0件である。本 Item・本 Spec・既存の記録も検索対象から除外しない。
-- [ ] AC6: Item の変更後は backlog-index で BACKLOG.md を再生成する。雛形から作成する文書と、更新した標準を再度 sync した結果にも旧語が再導入されない。
-- [ ] AC7: `bash tools/ai-standard/check-docs.sh` が成功する。
+- [x] AC1: 旧語の各使用箇所を文脈に応じて修正し、唯一の本体・最新の基準を指す場合は「マスター」、派生物の生成元を指す場合は「原本」とする。文書の意味と、完了済み Task・Review などの状態を維持する。
+- [x] AC2: `docs/architecture/` を指す用語を「マスタードキュメント」に統一し、用語定義・固定 Task 名・説明・DoD・MR チェックリストの表現も一致させる。
+- [x] AC3: `tools/ai-standard/manifest.txt` の管理対象は ai-dev-standard の管理元で修正し、sync で反映する。標準管理対象をプロジェクト側で直接編集しない。管理元と同期後の対象資材の両方に旧語が残っていないことを確認する。
+- [x] AC4: AGENTS.md のプロジェクト固有欄（ブランチ運用など）を sync 後も維持し、`.agents/skills/` と `.claude/skills/` の対応する内容が一致する。
+- [x] AC5: Git 管理対象のテキスト資材を隠しパスも含めて検索し、旧語が0件である。本 Item・本 Spec・既存の記録も検索対象から除外しない。
+- [x] AC6: Item の変更後は backlog-index で BACKLOG.md を再生成する。雛形から作成する文書と、更新した標準を再度 sync した結果にも旧語が再導入されない。
+- [x] AC7: `bash tools/ai-standard/check-docs.sh` が成功する。
 
 ## 関連
 
