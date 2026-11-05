@@ -1,11 +1,11 @@
 ---
 id: "0008"
 title: "プロジェクト資材の「正本」を「マスター」または「原本」に統一する"
-status: backlog        # backlog / ready / in-progress / done / dropped
+status: in-progress    # backlog / ready / in-progress / done / dropped
 priority: medium       # high / medium / low
 owner: ""
 created: 2026-11-04
-spec: ""               # 例: specs/0012-login-rework/（Spec を作らない場合は空）
+spec: "specs/0008-replace-seihon-terminology/"
 discussions: []        # 例: [discussions/2026-10-15-auth-ideas.md]
 ---
 ## 概要
