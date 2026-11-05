@@ -1,6 +1,6 @@
 # design: 0005 GitLab CI でテスト・ビルドを自動化し、ビルド結果をアーティファクトとリリースで管理する
 
-> これは本 Item による変更分の設計であり、全体の正本は docs/architecture/ にある。
+> これは本 Item による変更分の設計であり、全体のマスターは docs/architecture/ にある。
 > Item 完了時に、この内容を docs/architecture/ へ反映する。
 
 ## 変更の概要

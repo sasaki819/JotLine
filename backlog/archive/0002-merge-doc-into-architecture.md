@@ -10,7 +10,7 @@ discussions: []        # 例: [discussions/2026-10-15-auth-ideas.md]
 ---
 ## 概要
 
-ai-dev-standard の導入により、システム全体の最新設計（正本ドキュメント）の置き場所は `docs/architecture/` になった。一方、既存の設計書5本は `doc/` にあり、正本の置き場所が2つに分かれている。`doc/` の内容を `docs/architecture/` へ移動して一本化し、以降の Item の正本反映先を `docs/architecture/` に統一する。
+ai-dev-standard の導入により、システム全体の最新設計（マスタードキュメント）の置き場所は `docs/architecture/` になった。一方、既存の設計書5本は `doc/` にあり、マスタードキュメントの置き場所が2つに分かれている。`doc/` の内容を `docs/architecture/` へ移動して一本化し、以降の Item のマスタードキュメント反映先を `docs/architecture/` に統一する。
 
 対象（2026-10-19 時点）:
 
@@ -39,7 +39,7 @@ ai-dev-standard の導入により、システム全体の最新設計（正本�
 - [x] リポジトリ内（README.md など）に `doc/` への参照が残っていないことを確認する
   - 残っているのは、この Item 自身と完了済み Item 0001（`backlog/archive/`）の記述だけ。いずれも当時の状況の記録のため変更しない。
 - [x] `check-docs` を実行して OK を確認する
-- [x] 正本ドキュメントへの反映（この Item 自体が正本の再配置のため、上記タスクで完了とする）
+- [x] マスタードキュメントへの反映（この Item 自体がマスタードキュメントの再配置のため、上記タスクで完了とする）
 ## メモ
 
 - `docs/architecture/` はプロジェクト所有の領域で、sync では変更されない（`tools/ai-standard/manifest.txt` の記載による）。

@@ -6,7 +6,7 @@
 
 | ID | タイトル | status | priority | owner | Spec |
 |----|----------|--------|----------|-------|------|
-| [0008](backlog/items/0008-replace-seihon-terminology.md) | プロジェクト資材の「正本」を「マスター」または「原本」に統一する | in-progress | medium |  | [specs/0008-replace-seihon-terminology/](specs/0008-replace-seihon-terminology/) |
+| [0008](backlog/items/0008-replace-seihon-terminology.md) | プロジェクト資材の用語を「マスター」「原本」に統一する | in-progress | medium |  | [specs/0008-replace-seihon-terminology/](specs/0008-replace-seihon-terminology/) |
 | [0007](backlog/items/0007-send-cards-to-group.md) | カードの右クリックメニューからグループへ移動する | backlog | medium |  |  |
 | [0009](backlog/items/0009-add-card-within-group.md) | グループ内の任意の位置にカードを直接追加する | backlog | medium |  |  |
 | [0011](backlog/items/0011-preview-card-drop-position.md) | ドラッグ中にカードのドロップ先をプレビュー表示する | backlog | medium |  |  |
