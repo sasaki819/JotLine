@@ -1,7 +1,7 @@
 ---
 id: "0008"
 title: "プロジェクト資材の用語を「マスター」「原本」に統一する"
-status: in-progress    # backlog / ready / in-progress / done / dropped
+status: done           # backlog / ready / in-progress / done / dropped
 priority: medium       # high / medium / low
 owner: ""
 created: 2026-11-04

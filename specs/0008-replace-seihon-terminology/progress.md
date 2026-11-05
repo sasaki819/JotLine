@@ -29,6 +29,8 @@
 - マスタードキュメント反映 Task 検証: 共通の旧語残存検査、`bash tools/ai-standard/check-docs.sh`、`git diff --check` が成功した。
 - ADR 要否判断 Task: 新規 ADR は不要と判断した。用語の使い分けと管理元からの同期方針は requirements・design と標準の用語定義・運用文書で説明でき、独立したアーキテクチャ上の新規判断はない。
 - ADR 要否判断 Task 検証: 共通の旧語残存検査、`bash tools/ai-standard/check-docs.sh`、`git diff --check` が成功した。
+- 別コンテキストのサブエージェントによる AI レビューが指摘なしで終了し、ユーザーが承認した。Review は `reviews/2026-11-05-impl-ai.md`（コミット `3d897c6`）。レビュー時の build・全100テスト・型検査・check-docs も成功している。
+- close-item: 全 Task の完了、open／accepted の Finding がないこと、移動前の check-docs と旧語残存検査の成功を確認した。Item を done にして backlog/archive/ に移動し、requirements の Item 参照を更新した。BACKLOG.md を再生成し、移動後の check-docs・旧語残存検査・git diff --check も成功した。
 
 #### Task 3 受入基準の照合
 
@@ -56,5 +58,5 @@
 
 ### 中断点（次に何をすべきか）
 
-- tasks.md の全 Task と受入基準7項目が完了。次の工程は、別コンテキストでの AI レビュー。Item の完了処理はまだ行っていない。
+- Item 0008 の完了処理は終了。DoD の全項目を満たし、Item は backlog/archive/ に移動済み。
 - JotLine の適用版は0.1.3、管理元は上記コミットのまま。両リポジトリとも push は未実施。

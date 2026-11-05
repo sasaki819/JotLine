@@ -34,7 +34,7 @@
 
 ## 関連
 
-- Item: [backlog/items/0008-replace-seihon-terminology.md](../../backlog/items/0008-replace-seihon-terminology.md)
+- Item: [backlog/archive/0008-replace-seihon-terminology.md](../../backlog/archive/0008-replace-seihon-terminology.md)
 - Discussion: なし
 - ADR: なし
 - 標準管理範囲: [manifest](../../tools/ai-standard/manifest.txt)
