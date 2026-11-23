@@ -7,7 +7,7 @@
  * - 要件定義サンプルのパースと往復シリアライズ（等価性検証）
  * - 純粋Markdownエクスポート
  * - Splitの完全な逆操作としての直前カード統合（mergeCardWithPrevious）
- * - 複数カードのグループ化（groupSelectedCards）、グループ解除（ungroupCards）、名前変更（renameGroup）
+ * - 複数カードのグループ化（groupSelectedCards）、一括移動（moveCardsToGroupInDoc）、グループ解除（ungroupCards）、スレッド解散（dissolveGroupInDoc）、名前変更（renameGroup）
  */
 
 import { describe, it, expect } from "vitest";
@@ -17,7 +17,9 @@ import {
 	exportToPureMarkdown,
 	mergeCardWithPrevious,
 	groupSelectedCards,
+	moveCardsToGroupInDoc,
 	ungroupCards,
+	dissolveGroupInDoc,
 	renameGroup,
 	deleteGroupDoc,
 	moveCardInDoc,
@@ -265,7 +267,7 @@ Second card`;
 		expect(doc.groups[1].cards.map((c) => c.id)).toEqual(["c2", "c3"]);
 	});
 
-	it("ungroups cards completely dissolving a thread group in place", () => {
+	it("ungroups all cards from a thread into a new unclassified group at the tail", () => {
 		const doc = {
 			groups: [
 				{
@@ -276,17 +278,23 @@ Second card`;
 						{ id: "c2", content: "Card 2" },
 					],
 				},
+				{
+					id: "g2",
+					name: "thread-2",
+					cards: [{ id: "c3", content: "Card 3" }],
+				},
 			],
 		};
 
 		const result = ungroupCards(doc, ["c1", "c2"]);
 		expect(result).toBe(true);
-		expect(doc.groups).toHaveLength(1);
-		expect(doc.groups[0].name).toBe("");
-		expect(doc.groups[0].cards).toHaveLength(2);
+		expect(doc.groups.map((g) => g.name)).toEqual(["thread-2", ""]);
+		expect(doc.groups[0].cards.map((c) => c.id)).toEqual(["c3"]);
+		expect(doc.groups[1].cards.map((c) => c.id)).toEqual(["c1", "c2"]);
+		expect(doc.groups[1].cards.map((c) => c.content)).toEqual(["Card 1", "Card 2"]);
 	});
 
-	it("ungroups a single card from a multi-card thread group into default group", () => {
+	it("ungroups a single card from a multi-card thread group into a new unclassified group at the tail when the last group is named", () => {
 		const doc = {
 			groups: [
 				{
@@ -307,8 +315,41 @@ Second card`;
 
 		const result = ungroupCards(doc, ["c2"]);
 		expect(result).toBe(true);
+		expect(doc.groups.map((g) => g.name)).toEqual(["", "thread-1", ""]);
+		expect(doc.groups[0].cards.map((c) => c.id)).toEqual(["c0"]);
 		expect(doc.groups[1].cards.map((c) => c.id)).toEqual(["c1"]);
-		expect(doc.groups[0].cards.map((c) => c.id)).toEqual(["c0", "c2"]);
+		expect(doc.groups[2].cards.map((c) => c.id)).toEqual(["c2"]);
+	});
+
+	it("dissolves a thread group in place without moving cards to the tail", () => {
+		const doc = {
+			groups: [
+				{
+					id: "g1",
+					name: "",
+					cards: [{ id: "c0", content: "Top" }],
+				},
+				{
+					id: "g2",
+					name: "thread-1",
+					cards: [
+						{ id: "c1", content: "Card 1" },
+						{ id: "c2", content: "Card 2" },
+					],
+				},
+				{
+					id: "g3",
+					name: "thread-2",
+					cards: [{ id: "c3", content: "Card 3" }],
+				},
+			],
+		};
+
+		const result = dissolveGroupInDoc(doc, "g2");
+		expect(result).toBe(true);
+		expect(doc.groups.map((g) => g.name)).toEqual(["", "", "thread-2"]);
+		expect(doc.groups[1].id).toBe("g2");
+		expect(doc.groups[1].cards.map((c) => c.id)).toEqual(["c1", "c2"]);
 	});
 
 	it("renames a group", () => {
@@ -373,6 +414,141 @@ Second card`;
 
 		// c3 cannot move down (already bottom)
 		expect(moveCardInDoc(doc, "c3", "down")).toBe(false);
+	});
+});
+
+describe("Batch move, ungroup and thread dissolve operations", () => {
+	function createSampleDoc() {
+		return {
+			groups: [
+				{
+					id: "g-unclassified",
+					name: "",
+					cards: [
+						{ id: "c1", content: "U1" },
+						{ id: "c2", content: "U2" },
+					],
+				},
+				{
+					id: "g-alpha",
+					name: "shared",
+					cards: [
+						{ id: "c3", content: "A1" },
+						{ id: "c4", content: "A2" },
+					],
+				},
+				{
+					id: "g-beta",
+					name: "shared",
+					cards: [
+						{ id: "c5", content: "B1" },
+						{ id: "c6", content: "B2" },
+					],
+				},
+			],
+		};
+	}
+
+	it("moves a card from unclassified to a named group tail and preserves ID and content", () => {
+		const doc = createSampleDoc();
+		expect(moveCardsToGroupInDoc(doc, ["c1"], "g-alpha")).toBe(true);
+		expect(doc.groups[0].cards.map((c) => c.id)).toEqual(["c2"]);
+		expect(doc.groups[1].cards.map((c) => ({ id: c.id, content: c.content }))).toEqual([
+			{ id: "c3", content: "A1" },
+			{ id: "c4", content: "A2" },
+			{ id: "c1", content: "U1" },
+		]);
+		expect(doc.groups[2].cards.map((c) => c.id)).toEqual(["c5", "c6"]);
+	});
+
+	it("targets the exact group by ID even when multiple groups share the same name", () => {
+		const doc = createSampleDoc();
+		expect(moveCardsToGroupInDoc(doc, ["c3"], "g-beta")).toBe(true);
+		expect(doc.groups[1].id).toBe("g-alpha");
+		expect(doc.groups[1].cards.map((c) => c.id)).toEqual(["c4"]);
+		expect(doc.groups[2].id).toBe("g-beta");
+		expect(doc.groups[2].cards.map((c) => c.id)).toEqual(["c5", "c6", "c3"]);
+	});
+
+	it("moves cards to the tail of their current group and keeps the group name", () => {
+		const doc = createSampleDoc();
+		expect(moveCardsToGroupInDoc(doc, ["c3"], "g-alpha")).toBe(true);
+		expect(doc.groups[1].name).toBe("shared");
+		expect(doc.groups[1].cards.map((c) => c.id)).toEqual(["c4", "c3"]);
+	});
+
+	it("moves multiple cards across groups in document order regardless of selection order and removes emptied named sources", () => {
+		const doc = createSampleDoc();
+		// 選択順を逆にして、移動先内外が混在する複数カードを指定
+		expect(moveCardsToGroupInDoc(doc, ["c6", "c3", "c1", "c5"], "g-beta")).toBe(true);
+		expect(doc.groups.map((g) => g.id)).toEqual(["g-unclassified", "g-alpha", "g-beta"]);
+		expect(doc.groups[0].cards.map((c) => c.id)).toEqual(["c2"]);
+		expect(doc.groups[1].cards.map((c) => c.id)).toEqual(["c4"]);
+		expect(doc.groups[2].cards.map((c) => c.id)).toEqual(["c1", "c3", "c5", "c6"]);
+
+		// 元の名前付きグループが空になったら除去される
+		expect(moveCardsToGroupInDoc(doc, ["c4"], "g-beta")).toBe(true);
+		expect(doc.groups.map((g) => g.id)).toEqual(["g-unclassified", "g-beta"]);
+		expect(doc.groups[1].cards.map((c) => c.id)).toEqual(["c1", "c3", "c5", "c6", "c4"]);
+	});
+
+	it("reuses an existing tail unclassified group on ungroup and keeps document order for mixed selections", () => {
+		const doc = {
+			groups: [
+				{ id: "g0", name: "", cards: [{ id: "c0", content: "U0" }] },
+				{ id: "g1", name: "t1", cards: [{ id: "c1", content: "T1" }, { id: "c2", content: "T2" }] },
+				{ id: "g2", name: "", cards: [{ id: "c3", content: "Tail0" }] },
+			],
+		};
+
+		expect(ungroupCards(doc, ["c3", "c1", "c0"])).toBe(true);
+		expect(doc.groups.map((g) => g.id)).toEqual(["g0", "g1", "g2"]);
+		expect(doc.groups[0].cards).toEqual([]);
+		expect(doc.groups[1].cards.map((c) => c.id)).toEqual(["c2"]);
+		expect(doc.groups[2].cards.map((c) => c.id)).toEqual(["c0", "c1", "c3"]);
+	});
+
+	it("creates a new tail unclassified group even if removing an emptied named group exposes an earlier unclassified group", () => {
+		const doc = {
+			groups: [
+				{ id: "g0", name: "", cards: [{ id: "c0", content: "U0" }] },
+				{ id: "g1", name: "t1", cards: [{ id: "c1", content: "T1" }] },
+			],
+		};
+
+		expect(ungroupCards(doc, ["c1"])).toBe(true);
+		expect(doc.groups.map((g) => g.name)).toEqual(["", ""]);
+		expect(doc.groups[0].id).toBe("g0");
+		expect(doc.groups[0].cards.map((c) => c.id)).toEqual(["c0"]);
+		expect(doc.groups[1].id).not.toBe("g0");
+		expect(doc.groups[1].cards.map((c) => c.id)).toEqual(["c1"]);
+	});
+
+	it("returns false without mutating when target or cards are invalid, empty, or already in place", () => {
+		const doc = createSampleDoc();
+		const snapshot = structuredClone(doc);
+
+		expect(moveCardsToGroupInDoc(doc, [], "g-alpha")).toBe(false);
+		expect(moveCardsToGroupInDoc(doc, ["c1"], "missing")).toBe(false);
+		expect(moveCardsToGroupInDoc(doc, ["c1"], "g-unclassified")).toBe(false);
+		expect(moveCardsToGroupInDoc(doc, ["c1", "missing"], "g-alpha")).toBe(false);
+		expect(moveCardsToGroupInDoc(doc, ["c4", "c3"], "g-alpha")).toBe(false);
+		expect(moveCardsToGroupInDoc(doc, ["c4", "c4"], "g-alpha")).toBe(false);
+		expect(ungroupCards(doc, [])).toBe(false);
+		expect(ungroupCards(doc, ["missing"])).toBe(false);
+		expect(dissolveGroupInDoc(doc, "missing")).toBe(false);
+		expect(dissolveGroupInDoc(doc, "g-unclassified")).toBe(false);
+		expect(doc).toEqual(snapshot);
+
+		const tailUnclassified = {
+			groups: [
+				{ id: "g1", name: "t1", cards: [{ id: "c1", content: "A" }] },
+				{ id: "g2", name: "", cards: [{ id: "c2", content: "B" }, { id: "c3", content: "C" }] },
+			],
+		};
+		const tailSnapshot = structuredClone(tailUnclassified);
+		expect(ungroupCards(tailUnclassified, ["c3", "c2"])).toBe(false);
+		expect(tailUnclassified).toEqual(tailSnapshot);
 	});
 });
 
