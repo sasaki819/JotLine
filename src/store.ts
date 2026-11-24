@@ -155,7 +155,7 @@ export class JotStore {
 	 * 失敗した変更が表示に残ったまま次の操作で保存され、意図しない追加・削除が起きるのを防ぐためです。
 	 *
 	 * @param mutate ドキュメントを変更する関数（変更した場合は true を返す）
-	 * @returns 変更を保存できた場合は true（変更対象がない場合・書き込みに失敗した場合は false）
+	 * @returns 変更を保存できた場合は true（変更がない場合・書き込みに失敗した場合は false）
 	 */
 	private async applyChange(mutate: (doc: JotDocument) => boolean): Promise<boolean> {
 		let changed = false;
@@ -166,7 +166,7 @@ export class JotStore {
 		if (!changed) return false;
 
 		const result = await this.save();
-		if (result === "failed") {
+		if (result !== "saved") {
 			this.doc.set(parseJotDocument(this.currentText));
 			return false;
 		}

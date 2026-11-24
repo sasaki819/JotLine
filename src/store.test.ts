@@ -9,6 +9,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { get } from "svelte/store";
 import type { App, TFile } from "obsidian";
+import { __noticeTestState } from "./__mocks__/obsidian";
 import { JotStore } from "./store";
 import type { JotDocument } from "./types";
 
@@ -432,6 +433,7 @@ describe("JotStore insert / remove for drag and drop", () => {
 describe("JotStore card move, ungroup and thread dissolve", () => {
 	beforeEach(() => {
 		vi.useFakeTimers();
+		__noticeTestState.reset();
 	});
 
 	afterEach(() => {
@@ -572,5 +574,42 @@ Card D
 			{ name: "", cards: ["Card A", "Card B"] },
 			{ name: "topic", cards: ["Card C", "Card D"] },
 		]);
+		expect(__noticeTestState.messages.filter((m) => String(m).startsWith("Ungrouped"))).toEqual([]);
+	});
+
+	it("does not save, record history, or show a success Notice when serialized markdown is unchanged", async () => {
+		const { store, fake } = await createStore();
+		const { a, b, c, d, topicId } = ids(store);
+
+		// 末尾の名前付きグループを解散して全カードを削除すると、メモリ末尾だけ空の未分類グループが残る
+		expect(await store.dissolveGroup(topicId)).toBe(true);
+		expect(await store.removeCards([c, d])).toBe(true);
+		expect(docOf(store).groups).toHaveLength(2);
+		expect(docOf(store).groups[1].cards).toEqual([]);
+
+		const savedTextBefore = fake.getContent();
+		fake.vault.modify.mockClear();
+		__noticeTestState.reset();
+
+		expect(await store.ungroupSelectedCards([a, b])).toBe(false);
+		expect(fake.vault.modify).not.toHaveBeenCalled();
+		expect(fake.getContent()).toBe(savedTextBefore);
+		expect(__noticeTestState.messages).toEqual([]);
+		expect(docOf(store).groups.map((g) => ({ name: g.name, cards: g.cards.map((card) => card.content) }))).toEqual([
+			{ name: "", cards: ["Card A", "Card B"] },
+		]);
+
+		// ungroup の履歴が積まれていないため、直後の undo は removeCards を取り消す
+		expect(await store.undo()).toBe(true);
+		expect(fake.getContent()).toContain("Card C");
+	});
+
+	it("shows an Ungrouped Notice only when ungroupSelectedCards saves a change", async () => {
+		const { store } = await createStore();
+		const { c } = ids(store);
+
+		__noticeTestState.reset();
+		expect(await store.ungroupSelectedCards([c])).toBe(true);
+		expect(__noticeTestState.messages).toEqual(["Ungrouped 1 card(s)"]);
 	});
 });

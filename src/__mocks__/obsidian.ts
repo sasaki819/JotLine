@@ -7,9 +7,18 @@
  * テスト対象が実行時に使うものだけを最小限に定義します。
  */
 
-/** 通知（テストでは何も表示しない） */
+export const __noticeTestState = {
+	messages: [] as Array<string | DocumentFragment | undefined>,
+	reset() {
+		this.messages = [];
+	},
+};
+
+/** 通知（テストではメッセージ履歴だけ記録し画面には表示しない） */
 export class Notice {
-	constructor(_message?: string | DocumentFragment, _duration?: number) {}
+	constructor(message?: string | DocumentFragment, _duration?: number) {
+		__noticeTestState.messages.push(message);
+	}
 }
 
 export type MockMenuEntry =
