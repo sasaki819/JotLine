@@ -27,6 +27,7 @@ Item 0007 の承認経緯と、カードの移動・グループ解除に関す�
 - 修正後に `npm run build`、全128テスト（11ファイル）、`npx tsc --noEmit`、`bash tools/ai-standard/check-docs.sh` が成功した。
 - 実画面検証で出たスコープ外の課題3件を別 Item として `backlog/items/` に起票した（`0012-unify-unclassified-card-spacing`、`0013-cleanup-empty-unclassified-group`、`0014-keep-selection-after-group-move`）。
 - 固定 Task「マスタードキュメント（docs/architecture/）へ design の内容を反映」を実施し、`docs/architecture/03.UI-UX-Specification.md` に右クリックメニューの候補と操作、カード解除時の末尾配置、スレッド解散の動作、操作履歴への反映を記載して、`bash tools/ai-standard/check-docs.sh` が成功した。
+- 固定 Task「ADR の要否判断（必要なら作成）」を実施し、ADR 作成不要と判断した。
 
 ### 判断とその理由
 
@@ -40,7 +41,8 @@ Item 0007 の承認経緯と、カードの移動・グループ解除に関す�
 - `moveCardsInDoc()` では対象カードを1枚以上含んでいた名前付きグループが移動により空になった場合のみ除去するよう修正した（元々カード0枚の無関係な名前付きグループを維持するため）。
 - 実画面検証で挙がった隣接未分類グループ間のマージン（`0012`）、空になった未分類グループ枠の残存（`0013`）、移動後の選択状態維持（`0014`）は Item 0007 の設計範囲外または既存仕様に関わるため、その場では変更せず新規 Item として切り出した。
 - マスタードキュメントの更新対象は design の影響範囲どおり `docs/architecture/03.UI-UX-Specification.md` に限定し、操作仕様・末尾配置・スレッド解散との違い・履歴仕様の整合を取った。
+- ADR の要否：作成不要と判断した。データ形式、履歴のテキストスナップショット方式（ADR 0001）、依存パッケージ、`minAppVersion`（1.1.0）などアーキテクチャ全体に関わる根本方針の変更がなく、公開 API 外の `MenuItem.setSubmenu()` 対応も `src/ui/cardMoveMenu.ts` 内に局所化して公開 API の子メニューへ安全にフォールバックする実装にとどまるため。
 
 ### 中断点（次に何をすべきか）
 
-- 次は「ADR の要否判断（必要なら作成）(after: 3)」。
+- 全 Task 完了。次は `self-review` スキルによる AI レビューの実施。

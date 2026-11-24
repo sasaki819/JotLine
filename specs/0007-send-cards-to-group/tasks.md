@@ -30,6 +30,6 @@
 - [x] マスタードキュメント（docs/architecture/）へ design の内容を反映 (after: 3)
   - **完了条件**　`docs/architecture/03.UI-UX-Specification.md` に、右クリックメニューの候補と操作、カード解除時の末尾配置、スレッド解散の動作、履歴への反映を記載する。
   - **検証コマンド**　`bash tools/ai-standard/check-docs.sh`
-- [ ] ADR の要否判断（必要なら作成） (after: 3)
+- [x] ADR の要否判断（必要なら作成） (after: 3)
   - **完了条件**　ADR の要否と理由を progress に記録する。必要な場合は `templates/adr.md` を使って `docs/adr/` に作成する。
   - **検証コマンド**　`bash tools/ai-standard/check-docs.sh`
