@@ -28,6 +28,8 @@ Item 0007 の承認経緯と、カードの移動・グループ解除に関す�
 - 実画面検証で出たスコープ外の課題3件を別 Item として `backlog/items/` に起票した（`0012-unify-unclassified-card-spacing`、`0013-cleanup-empty-unclassified-group`、`0014-keep-selection-after-group-move`）。
 - 固定 Task「マスタードキュメント（docs/architecture/）へ design の内容を反映」を実施し、`docs/architecture/03.UI-UX-Specification.md` に右クリックメニューの候補と操作、カード解除時の末尾配置、スレッド解散の動作、操作履歴への反映を記載して、`bash tools/ai-standard/check-docs.sh` が成功した。
 - 固定 Task「ADR の要否判断（必要なら作成）」を実施し、ADR 作成不要と判断した。
+- `self-review` スキルで別コンテキストの AI レビューを実施し、`specs/0007-send-cards-to-group/reviews/2026-11-24-impl-ai.md` を作成した（High 0件・Medium 0件・Low 1件: R1）。
+- ユーザーが R1 を `accepted` としたため `apply-review` を実施し、`src/store.ts` の `applyChange()` が `save()` の `"unchanged"` 時にも `false` を返すよう修正した。`src/__mocks__/obsidian.ts` と `src/store.test.ts` に回帰テストを追加し、`npm run build`、全130テスト（11ファイル）、`npx tsc --noEmit`、`bash tools/ai-standard/check-docs.sh` が成功してコミットした（`a088819`）。R1 の状態を `fixed` に更新した。
 
 ### 判断とその理由
 
@@ -42,7 +44,8 @@ Item 0007 の承認経緯と、カードの移動・グループ解除に関す�
 - 実画面検証で挙がった隣接未分類グループ間のマージン（`0012`）、空になった未分類グループ枠の残存（`0013`）、移動後の選択状態維持（`0014`）は Item 0007 の設計範囲外または既存仕様に関わるため、その場では変更せず新規 Item として切り出した。
 - マスタードキュメントの更新対象は design の影響範囲どおり `docs/architecture/03.UI-UX-Specification.md` に限定し、操作仕様・末尾配置・スレッド解散との違い・履歴仕様の整合を取った。
 - ADR の要否：作成不要と判断した。データ形式、履歴のテキストスナップショット方式（ADR 0001）、依存パッケージ、`minAppVersion`（1.1.0）などアーキテクチャ全体に関わる根本方針の変更がなく、公開 API 外の `MenuItem.setSubmenu()` 対応も `src/ui/cardMoveMenu.ts` 内に局所化して公開 API の子メニューへ安全にフォールバックする実装にとどまるため。
+- R1 対応方針：`applyChange()` で `result !== "saved"` の場合に `this.doc.set(parseJotDocument(this.currentText))` で実体と同期して `false` を返す方式とした。呼び出し側で判別する案と比べ、`ungroupSelectedCards()` が無変更時に成功通知を出さないだけでなく、シリアライズされないメモリ上の空未分類グループ残留による実体との乖離も防げるため。
 
 ### 中断点（次に何をすべきか）
 
-- 全 Task 完了。次は `self-review` スキルによる AI レビューの実施。
+- `self-review` および `apply-review` 完了（未対応の Finding なし）。次は `pr-draft` または `close-item` の実施。
