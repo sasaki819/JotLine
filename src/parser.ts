@@ -409,6 +409,7 @@ function moveCardsInDoc(doc: JotDocument, cardIds: string[], target: MoveTarget)
 	const nextGroups: JotGroup[] = [];
 	for (const group of doc.groups) {
 		const remainingCards = group.cards.filter((c) => !idSet.has(c.id));
+		const hadSelectedCards = remainingCards.length < group.cards.length;
 
 		if (!appendNewUnclassifiedGroup && group.id === targetGroupId) {
 			nextGroups.push({
@@ -419,7 +420,7 @@ function moveCardsInDoc(doc: JotDocument, cardIds: string[], target: MoveTarget)
 			continue;
 		}
 
-		if (remainingCards.length === 0 && group.name !== "") {
+		if (hadSelectedCards && remainingCards.length === 0 && group.name !== "") {
 			continue;
 		}
 

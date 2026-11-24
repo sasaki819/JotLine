@@ -550,6 +550,32 @@ describe("Batch move, ungroup and thread dissolve operations", () => {
 		expect(ungroupCards(tailUnclassified, ["c3", "c2"])).toBe(false);
 		expect(tailUnclassified).toEqual(tailSnapshot);
 	});
+
+	it("preserves unrelated empty named groups when moving or ungrouping other cards", () => {
+		const doc = {
+			groups: [
+				{ id: "g-unclassified", name: "", cards: [{ id: "c1", content: "U1" }] },
+				{ id: "g-empty-named", name: "empty-thread", cards: [] },
+				{ id: "g-source", name: "source", cards: [{ id: "c2", content: "S1" }] },
+				{ id: "g-dest", name: "dest", cards: [{ id: "c3", content: "D1" }] },
+			],
+		};
+
+		expect(moveCardsToGroupInDoc(doc, ["c2"], "g-dest")).toBe(true);
+		expect(doc.groups.map((g) => ({ id: g.id, name: g.name, cardIds: g.cards.map((c) => c.id) }))).toEqual([
+			{ id: "g-unclassified", name: "", cardIds: ["c1"] },
+			{ id: "g-empty-named", name: "empty-thread", cardIds: [] },
+			{ id: "g-dest", name: "dest", cardIds: ["c3", "c2"] },
+		]);
+
+		expect(ungroupCards(doc, ["c2"])).toBe(true);
+		expect(doc.groups.map((g) => ({ id: g.id, name: g.name, cardIds: g.cards.map((c) => c.id) }))).toEqual([
+			{ id: "g-unclassified", name: "", cardIds: ["c1"] },
+			{ id: "g-empty-named", name: "empty-thread", cardIds: [] },
+			{ id: "g-dest", name: "dest", cardIds: ["c3"] },
+			{ id: doc.groups[3].id, name: "", cardIds: ["c2"] },
+		]);
+	});
 });
 
 describe("D&D document operations", () => {
