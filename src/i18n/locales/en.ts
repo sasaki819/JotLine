@@ -24,6 +24,8 @@ export default {
 	DELETE_SELECTION: "Delete selected cards",
 
 	// Context Menu items
+	MENU_SEND_TO_GROUP: "Send to group",
+	MENU_SEND_TO_GROUP_UNGROUP: "Ungroup",
 	MENU_GROUP_MULTI: (count: number) => `Group ${count} selected cards`,
 	MENU_UNGROUP_MULTI: (count: number) => `Ungroup ${count} selected cards`,
 	MENU_COPY_MULTI: (count: number) => `Copy ${count} selected cards`,
