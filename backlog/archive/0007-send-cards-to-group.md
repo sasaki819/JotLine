@@ -1,7 +1,7 @@
 ---
 id: "0007"
 title: "カードの右クリックメニューからグループへ移動する"
-status: in-progress
+status: done
 priority: medium
 owner: ""
 created: 2026-11-04
