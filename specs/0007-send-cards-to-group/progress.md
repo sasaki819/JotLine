@@ -26,6 +26,7 @@ Item 0007 の承認経緯と、カードの移動・グループ解除に関す�
 - 実画面検証で報告された「カード0枚の既存名前付きグループが別カード移動時に消える」不具合について、design の仕様（対象を含まない既存グループの名前・ID・順序を維持する）に反していたため `src/parser.ts` の `moveCardsInDoc()` を修正し、`src/parser.test.ts` に回帰テストを追加した。
 - 修正後に `npm run build`、全128テスト（11ファイル）、`npx tsc --noEmit`、`bash tools/ai-standard/check-docs.sh` が成功した。
 - 実画面検証で出たスコープ外の課題3件を別 Item として `backlog/items/` に起票した（`0012-unify-unclassified-card-spacing`、`0013-cleanup-empty-unclassified-group`、`0014-keep-selection-after-group-move`）。
+- 固定 Task「マスタードキュメント（docs/architecture/）へ design の内容を反映」を実施し、`docs/architecture/03.UI-UX-Specification.md` に右クリックメニューの候補と操作、カード解除時の末尾配置、スレッド解散の動作、操作履歴への反映を記載して、`bash tools/ai-standard/check-docs.sh` が成功した。
 
 ### 判断とその理由
 
@@ -38,7 +39,8 @@ Item 0007 の承認経緯と、カードの移動・グループ解除に関す�
 - `addCardMoveMenu()` で `setSubmenu()` の呼び出しが例外を投げた場合は、エラーログのみ出力してクリックで子 `Menu` を開くフォールバック経路へ進めるようにした（例外時もデータ操作を行わず、かつ未対応実装への耐性を保つため）。
 - `moveCardsInDoc()` では対象カードを1枚以上含んでいた名前付きグループが移動により空になった場合のみ除去するよう修正した（元々カード0枚の無関係な名前付きグループを維持するため）。
 - 実画面検証で挙がった隣接未分類グループ間のマージン（`0012`）、空になった未分類グループ枠の残存（`0013`）、移動後の選択状態維持（`0014`）は Item 0007 の設計範囲外または既存仕様に関わるため、その場では変更せず新規 Item として切り出した。
+- マスタードキュメントの更新対象は design の影響範囲どおり `docs/architecture/03.UI-UX-Specification.md` に限定し、操作仕様・末尾配置・スレッド解散との違い・履歴仕様の整合を取った。
 
 ### 中断点（次に何をすべきか）
 
-- 次は「マスタードキュメント（docs/architecture/）へ design の内容を反映 (after: 3)」。
+- 次は「ADR の要否判断（必要なら作成）(after: 3)」。

@@ -27,7 +27,7 @@
   - **完了条件**　design のテスト方針に沿って AC1〜AC11 の確認結果を照合する。実画面ではメニューの開閉と候補選択、複数カードの順序、解除後の末尾配置、再読み込み、Undo／Redo、スレッド解散を確認する。
     デスクトップ・モバイルの確認結果と Obsidian のバージョンを progress に記録する。サブメニュー対応環境と最小対応バージョンでの経路を確認し、実環境を用意できない項目は未確認として記録する。
   - **検証コマンド**　`bash tools/ai-standard/check-docs.sh`
-- [ ] マスタードキュメント（docs/architecture/）へ design の内容を反映 (after: 3)
+- [x] マスタードキュメント（docs/architecture/）へ design の内容を反映 (after: 3)
   - **完了条件**　`docs/architecture/03.UI-UX-Specification.md` に、右クリックメニューの候補と操作、カード解除時の末尾配置、スレッド解散の動作、履歴への反映を記載する。
   - **検証コマンド**　`bash tools/ai-standard/check-docs.sh`
 - [ ] ADR の要否判断（必要なら作成） (after: 3)
