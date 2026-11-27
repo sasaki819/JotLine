@@ -9,6 +9,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { get } from "svelte/store";
 import type { App, TFile } from "obsidian";
+import { __noticeTestState } from "./__mocks__/obsidian";
 import { JotStore } from "./store";
 import type { JotDocument } from "./types";
 
@@ -187,8 +188,10 @@ describe("JotStore undo / redo", () => {
 		["moveCardDown", (s) => s.moveCardDown(ids(s).a)],
 		["reorderCard", (s) => s.reorderCard(ids(s).a, ids(s).topicId, 1)],
 		["groupSelectedCards", (s) => s.groupSelectedCards([ids(s).a, ids(s).b], "grouped")],
+		["moveCardsToGroup", (s) => s.moveCardsToGroup([ids(s).b, ids(s).a], ids(s).topicId)],
 		["deleteMultipleCards", (s) => s.deleteMultipleCards([ids(s).a, ids(s).c])],
 		["ungroupSelectedCards", (s) => s.ungroupSelectedCards([ids(s).c])],
+		["dissolveGroup", (s) => s.dissolveGroup(ids(s).topicId)],
 		["renameGroup", (s) => s.renameGroup(ids(s).topicId, "renamed")],
 	];
 
@@ -424,5 +427,189 @@ describe("JotStore insert / remove for drag and drop", () => {
 		expect(fake.getContent()).toBe(SAMPLE);
 		// 失敗した削除が表示に残らない
 		expect(docOf(store).groups[0].cards.map((c) => c.content)).toEqual(["Card A", "Card B"]);
+	});
+});
+
+describe("JotStore card move, ungroup and thread dissolve", () => {
+	beforeEach(() => {
+		vi.useFakeTimers();
+		__noticeTestState.reset();
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	it("moves multiple cards in one save, reloads with the same order, and undoes/redoes in one step", async () => {
+		const { store, fake } = await createStore();
+		const before = fake.getContent();
+		const { b, c, topicId } = ids(store);
+
+		expect(await store.moveCardsToGroup([c, b], topicId)).toBe(true);
+		expect(fake.vault.modify).toHaveBeenCalledTimes(1);
+
+		const expected = [
+			{ name: "", cards: ["Card A"] },
+			{ name: "topic", cards: ["Card D", "Card B", "Card C"] },
+		];
+		expect(docOf(store).groups.map((g) => ({ name: g.name, cards: g.cards.map((card) => card.content) }))).toEqual(expected);
+
+		const reloaded = await createStore(fake.getContent());
+		expect(docOf(reloaded.store).groups.map((g) => ({ name: g.name, cards: g.cards.map((card) => card.content) }))).toEqual(expected);
+
+		expect(await store.undo()).toBe(true);
+		expect(fake.getContent()).toBe(before);
+		expect(await store.redo()).toBe(true);
+		expect(docOf(store).groups.map((g) => ({ name: g.name, cards: g.cards.map((card) => card.content) }))).toEqual(expected);
+	});
+
+	it("ungroups cards to the tail unclassified group, persists on reload, and undoes/redoes in one step", async () => {
+		const { store, fake } = await createStore();
+		const before = fake.getContent();
+		const { d, c } = ids(store);
+
+		expect(await store.ungroupSelectedCards([d, c])).toBe(true);
+		expect(fake.vault.modify).toHaveBeenCalledTimes(1);
+
+		const expected = [
+			{ name: "", cards: ["Card A", "Card B"] },
+			{ name: "", cards: ["Card C", "Card D"] },
+		];
+		expect(docOf(store).groups.map((g) => ({ name: g.name, cards: g.cards.map((card) => card.content) }))).toEqual(expected);
+
+		const reloaded = await createStore(fake.getContent());
+		expect(docOf(reloaded.store).groups.map((g) => ({ name: g.name, cards: g.cards.map((card) => card.content) }))).toEqual(expected);
+
+		expect(await store.undo()).toBe(true);
+		expect(fake.getContent()).toBe(before);
+		expect(await store.redo()).toBe(true);
+		expect(docOf(store).groups.map((g) => ({ name: g.name, cards: g.cards.map((card) => card.content) }))).toEqual(expected);
+	});
+
+	it("dissolves a middle thread group in place, persists on reload, and undoes/redoes in one step", async () => {
+		const initial = `<!-- group -->
+<!-- card -->
+Card A
+
+<!-- group: mid -->
+<!-- card -->
+Card B
+
+<!-- card -->
+Card C
+
+<!-- group: last -->
+<!-- card -->
+Card D
+`;
+		const { store, fake } = await createStore(initial);
+		const midId = docOf(store).groups[1].id;
+
+		expect(await store.dissolveGroup(midId)).toBe(true);
+		expect(fake.vault.modify).toHaveBeenCalledTimes(1);
+
+		const expected = [
+			{ name: "", cards: ["Card A"] },
+			{ name: "", cards: ["Card B", "Card C"] },
+			{ name: "last", cards: ["Card D"] },
+		];
+		expect(docOf(store).groups.map((g) => ({ name: g.name, cards: g.cards.map((card) => card.content) }))).toEqual(expected);
+
+		const reloaded = await createStore(fake.getContent());
+		expect(docOf(reloaded.store).groups.map((g) => ({ name: g.name, cards: g.cards.map((card) => card.content) }))).toEqual(expected);
+
+		expect(await store.undo()).toBe(true);
+		expect(fake.getContent()).toBe(initial);
+		expect(await store.redo()).toBe(true);
+		expect(docOf(store).groups.map((g) => ({ name: g.name, cards: g.cards.map((card) => card.content) }))).toEqual(expected);
+	});
+
+	it("does not save or record history when IDs are invalid or order is unchanged", async () => {
+		const { store, fake } = await createStore();
+		const { a, c, d, topicId } = ids(store);
+		const unclassifiedId = docOf(store).groups[0].id;
+
+		expect(await store.moveCardsToGroup([], topicId)).toBe(false);
+		expect(await store.moveCardsToGroup(["missing"], topicId)).toBe(false);
+		expect(await store.moveCardsToGroup([a], "missing")).toBe(false);
+		expect(await store.moveCardsToGroup([a], unclassifiedId)).toBe(false);
+		expect(await store.moveCardsToGroup([c, d], topicId)).toBe(false);
+		expect(await store.ungroupSelectedCards(["missing"])).toBe(false);
+		expect(await store.dissolveGroup("missing")).toBe(false);
+		expect(await store.dissolveGroup(unclassifiedId)).toBe(false);
+
+		expect(fake.vault.modify).not.toHaveBeenCalled();
+		expect(get(store.historyState)).toEqual({ canUndo: false, canRedo: false });
+	});
+
+	it("returns false and restores the document when writing fails", async () => {
+		const { store, fake } = await createStore();
+		const { a, c, topicId } = ids(store);
+		const snapshot = () =>
+			docOf(store).groups.map((g) => ({ name: g.name, cards: g.cards.map((card) => card.content) }));
+
+		fake.failNextModify();
+		expect(await store.moveCardsToGroup([a], topicId)).toBe(false);
+		expect(fake.getContent()).toBe(SAMPLE);
+		expect(get(store.historyState).canUndo).toBe(false);
+		expect(snapshot()).toEqual([
+			{ name: "", cards: ["Card A", "Card B"] },
+			{ name: "topic", cards: ["Card C", "Card D"] },
+		]);
+
+		fake.failNextModify();
+		expect(await store.ungroupSelectedCards([c])).toBe(false);
+		expect(fake.getContent()).toBe(SAMPLE);
+		expect(get(store.historyState).canUndo).toBe(false);
+		expect(snapshot()).toEqual([
+			{ name: "", cards: ["Card A", "Card B"] },
+			{ name: "topic", cards: ["Card C", "Card D"] },
+		]);
+
+		fake.failNextModify();
+		expect(await store.dissolveGroup(topicId)).toBe(false);
+		expect(fake.getContent()).toBe(SAMPLE);
+		expect(get(store.historyState).canUndo).toBe(false);
+		expect(snapshot()).toEqual([
+			{ name: "", cards: ["Card A", "Card B"] },
+			{ name: "topic", cards: ["Card C", "Card D"] },
+		]);
+		expect(__noticeTestState.messages.filter((m) => String(m).startsWith("Ungrouped"))).toEqual([]);
+	});
+
+	it("does not save, record history, or show a success Notice when serialized markdown is unchanged", async () => {
+		const { store, fake } = await createStore();
+		const { a, b, c, d, topicId } = ids(store);
+
+		// 末尾の名前付きグループを解散して全カードを削除すると、メモリ末尾だけ空の未分類グループが残る
+		expect(await store.dissolveGroup(topicId)).toBe(true);
+		expect(await store.removeCards([c, d])).toBe(true);
+		expect(docOf(store).groups).toHaveLength(2);
+		expect(docOf(store).groups[1].cards).toEqual([]);
+
+		const savedTextBefore = fake.getContent();
+		fake.vault.modify.mockClear();
+		__noticeTestState.reset();
+
+		expect(await store.ungroupSelectedCards([a, b])).toBe(false);
+		expect(fake.vault.modify).not.toHaveBeenCalled();
+		expect(fake.getContent()).toBe(savedTextBefore);
+		expect(__noticeTestState.messages).toEqual([]);
+		expect(docOf(store).groups.map((g) => ({ name: g.name, cards: g.cards.map((card) => card.content) }))).toEqual([
+			{ name: "", cards: ["Card A", "Card B"] },
+		]);
+
+		// ungroup の履歴が積まれていないため、直後の undo は removeCards を取り消す
+		expect(await store.undo()).toBe(true);
+		expect(fake.getContent()).toContain("Card C");
+	});
+
+	it("shows an Ungrouped Notice only when ungroupSelectedCards saves a change", async () => {
+		const { store } = await createStore();
+		const { c } = ids(store);
+
+		__noticeTestState.reset();
+		expect(await store.ungroupSelectedCards([c])).toBe(true);
+		expect(__noticeTestState.messages).toEqual(["Ungrouped 1 card(s)"]);
 	});
 });

@@ -9,7 +9,9 @@ import {
 	mergeCardWithPrevious,
 	groupSelectedCards,
 	generateGroupTimestamp,
+	moveCardsToGroupInDoc,
 	ungroupCards,
+	dissolveGroupInDoc,
 	renameGroup,
 	deleteGroupDoc,
 	moveCardInDoc,
@@ -153,7 +155,7 @@ export class JotStore {
 	 * 失敗した変更が表示に残ったまま次の操作で保存され、意図しない追加・削除が起きるのを防ぐためです。
 	 *
 	 * @param mutate ドキュメントを変更する関数（変更した場合は true を返す）
-	 * @returns 変更を保存できた場合は true（変更対象がない場合・書き込みに失敗した場合は false）
+	 * @returns 変更を保存できた場合は true（変更がない場合・書き込みに失敗した場合は false）
 	 */
 	private async applyChange(mutate: (doc: JotDocument) => boolean): Promise<boolean> {
 		let changed = false;
@@ -164,7 +166,7 @@ export class JotStore {
 		if (!changed) return false;
 
 		const result = await this.save();
-		if (result === "failed") {
+		if (result !== "saved") {
 			this.doc.set(parseJotDocument(this.currentText));
 			return false;
 		}
@@ -685,23 +687,38 @@ export class JotStore {
 	}
 
 	/**
-	 * 選択されたカードのグループ所属を解除（未分類グループへ戻す）します。
+	 * 指定されたカード群を既存の名前付きグループの末尾へまとめて移動して保存します。
+	 *
+	 * @param cardIds 移動対象のカードIDリスト
+	 * @param targetGroupId 移動先の名前付きグループID
+	 * @returns 変更を保存できた場合は true
+	 */
+	async moveCardsToGroup(cardIds: string[], targetGroupId: string): Promise<boolean> {
+		return this.applyChange((doc) => moveCardsToGroupInDoc(doc, cardIds, targetGroupId));
+	}
+
+	/**
+	 * 選択されたカードのグループ所属を解除し、ファイル末尾の未分類グループへ移動して保存します。
 	 * 
 	 * @param cardIds 解除対象のカードIDリスト
-	 * @returns 処理が成功した場合は true
+	 * @returns 変更を保存できた場合は true
 	 */
 	async ungroupSelectedCards(cardIds: string[]): Promise<boolean> {
-		let success = false;
-		this.doc.update((current) => {
-			success = ungroupCards(current, cardIds);
-			return current;
-		});
-
-		if (success) {
-			await this.save();
+		const saved = await this.applyChange((doc) => ungroupCards(doc, cardIds));
+		if (saved) {
 			new Notice(`Ungrouped ${cardIds.length} card(s)`);
 		}
-		return success;
+		return saved;
+	}
+
+	/**
+	 * 指定された名前付きグループをその場で解散し、未分類グループにして保存します。
+	 *
+	 * @param groupId 解散対象のグループID
+	 * @returns 変更を保存できた場合は true
+	 */
+	async dissolveGroup(groupId: string): Promise<boolean> {
+		return this.applyChange((doc) => dissolveGroupInDoc(doc, groupId));
 	}
 
 	/**

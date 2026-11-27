@@ -12,9 +12,9 @@
 	 * 2. カードの選択状態管理:
 	 *    - 単一選択、Ctrl/Cmd+Clickによるトグル選択、Shift+Clickによる連続範囲選択、Escapeによる選択解除を実装。
 	 * 3. コンテキストメニュー（右クリックメニュー）:
-	 *    - Obsidianの `Menu` APIを利用し、選択カード数に応じたアクション（グループ化、解除、コピー、削除）を提供。
+	 *    - Obsidianの `Menu` APIを利用し、選択カード数に応じたアクション（グループ化、グループへ移動、解除、コピー、削除）を提供。
 	 * 4. 一括操作アクション:
-	 *    - 選択カードのグループ化、グループ解除、Markdownコピー、一括削除の実行と状態リセット。
+	 *    - 選択カードのグループ化、グループ移動、グループ解除、Markdownコピー、一括削除の実行と状態リセット。
 	 * 5. アンドゥ／リドゥ:
 	 *    - ヘッダーのボタンとキー操作（Ctrl/Cmd+Z、Ctrl/Cmd+Shift+Z、Ctrl+Y）からストアのアンドゥ／リドゥを実行。
 	 *    - アンドゥ／リドゥや外部変更で表示が置き換わったら、カードの選択を解除。
@@ -24,6 +24,7 @@
 	import type { JotStore } from "../store";
 	import GroupView from "./GroupView.svelte";
 	import InputBar from "./InputBar.svelte";
+	import { addCardMoveMenu } from "./cardMoveMenu";
 	import { exportToPureMarkdown } from "../parser";
 	import { icon } from "../utils/icon";
 	import { t } from "../i18n";
@@ -97,7 +98,7 @@
 
 	/**
 	 * カードクリック時の選択・複数選択処理
-	 * ボタンや入力欄、編集領域内のクリックは除外します。
+	 * ボタンや入力欄、編集領域内のクリックは選択処理を無視します。
 	 * 
 	 * - Shift+Click: 直前の選択カードから現在クリックしたカードまでの範囲を一括選択
 	 * - Ctrl/Cmd+Click: 選択状態の個別トグル（追加/除外）
@@ -166,6 +167,10 @@
 
 		const menu = new Menu();
 		const targetCardIds = Array.from(selectedCardIds);
+		const moveCallbacks = {
+			onMoveToGroup: handleMoveCardsToGroup,
+			onUngroup: handleUngroupCards,
+		};
 
 		// 指定したカード群の中に名前付きグループに属するカードがあるか判定
 		const hasCardInNamedGroup = (ids: string[]) => {
@@ -183,13 +188,14 @@
 						await handleGroupSelection();
 					})
 			);
+			addCardMoveMenu(menu, $doc.groups, targetCardIds, moveCallbacks, event);
 			if (hasCardInNamedGroup(targetCardIds)) {
 				menu.addItem((item) =>
 					item
 						.setTitle(t("MENU_UNGROUP_MULTI", targetCardIds.length))
 						.setIcon("folder-minus")
 						.onClick(async () => {
-							await handleUngroupSelection();
+							await handleUngroupCards(targetCardIds);
 						})
 				);
 			}
@@ -226,8 +232,7 @@
 						.setTitle(t("MENU_CARD_UNGROUP"))
 						.setIcon("folder-minus")
 						.onClick(async () => {
-							await store.ungroupSelectedCards([cardId]);
-							clearSelection();
+							await handleUngroupCards(targetCardIds);
 						})
 				);
 			} else {
@@ -241,6 +246,7 @@
 						})
 				);
 			}
+			addCardMoveMenu(menu, $doc.groups, targetCardIds, moveCallbacks, event);
 			menu.addItem((item) =>
 				item
 					.setTitle(t("MENU_CARD_COPY"))
@@ -277,13 +283,36 @@
 	}
 
 	/**
-	 * 選択中のカードのグループ所属を解除（未分類グループへ戻す）する
+	 * 指定したカード群を既存の名前付きグループの末尾へ移動する
+	 * 保存失敗時も選択を解除し、復元で振り直されたIDを選択状態に残さない。
+	 */
+	async function handleMoveCardsToGroup(ids: string[], targetGroupId: string) {
+		if (ids.length === 0) return;
+		try {
+			await store.moveCardsToGroup(ids, targetGroupId);
+		} finally {
+			clearSelection();
+		}
+	}
+
+	/**
+	 * 指定したカード群のグループ所属を解除し、ファイル末尾の未分類グループへ移動する
+	 * 保存失敗時も選択を解除し、復元で振り直されたIDを選択状態に残さない。
+	 */
+	async function handleUngroupCards(ids: string[]) {
+		if (ids.length === 0) return;
+		try {
+			await store.ungroupSelectedCards(ids);
+		} finally {
+			clearSelection();
+		}
+	}
+
+	/**
+	 * 選択中のカードのグループ所属を解除（ファイル末尾の未分類グループへ移動）する
 	 */
 	async function handleUngroupSelection() {
-		const ids = Array.from(selectedCardIds);
-		if (ids.length === 0) return;
-		await store.ungroupSelectedCards(ids);
-		clearSelection();
+		await handleUngroupCards(Array.from(selectedCardIds));
 	}
 
 	/**
@@ -316,7 +345,7 @@
 	}
 
 	/**
-	 * 存在しなくなったカードを選択から外す
+	 * 存在しなくなったカード（ドラッグ＆ドロップでの移動などで削除されたもの）を選択から外す
 	 */
 	function pruneSelection(existingIds: string[]) {
 		const existing = new Set(existingIds);
