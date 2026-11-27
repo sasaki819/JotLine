@@ -345,48 +345,151 @@ export function groupSelectedCards(
 	return true;
 }
 
+type MoveTarget =
+	| { kind: "named"; groupId: string }
+	| { kind: "unclassifiedTail" };
+
 /**
- * 選択されたカードのグループ所属を解除（Ungroup）します。
- * 
- * 【解除仕様】:
- * - スレッド内のすべてのカードが選択解除された場合: スレッドの配置位置を崩さず、その場でスレッド名のみを空文字（未分類）にクリアします。
- * - 一部のカードのみ解除された場合: 対象カードをスレッドから除外して、未分類（デフォルト）グループへと移動します。
- * 
+ * 2つのグループ配列の構造（グループID・グループ名・各グループのカードID配列）が一致するかを判定します。
+ */
+function isSameDocumentStructure(a: JotGroup[], b: JotGroup[]): boolean {
+	if (a.length !== b.length) return false;
+	for (let g = 0; g < a.length; g++) {
+		if (a[g].id !== b[g].id || a[g].name !== b[g].name) return false;
+		if (a[g].cards.length !== b[g].cards.length) return false;
+		for (let c = 0; c < a[g].cards.length; c++) {
+			if (a[g].cards[c].id !== b[g].cards[c].id) return false;
+		}
+	}
+	return true;
+}
+
+/**
+ * 指定されたカード群を表示順を保って移動先（名前付きグループ末尾、またはファイル末尾の未分類グループ）へ一括移動する共通ヘルパーです。
+ *
+ * @param doc JotDocument ドキュメント
+ * @param cardIds 移動対象のカードIDリスト
+ * @param target 移動先の指定
+ * @returns 構成が変化した場合は true、無効なIDや無変更の場合は false
+ */
+function moveCardsInDoc(doc: JotDocument, cardIds: string[], target: MoveTarget): boolean {
+	const idSet = new Set(cardIds);
+	if (idSet.size === 0) return false;
+
+	const collectedCards: JotCard[] = [];
+	const foundIds = new Set<string>();
+	for (const group of doc.groups) {
+		for (const card of group.cards) {
+			if (idSet.has(card.id)) {
+				collectedCards.push(card);
+				foundIds.add(card.id);
+			}
+		}
+	}
+
+	if (foundIds.size !== idSet.size) return false;
+
+	let targetGroupId: string;
+	let appendNewUnclassifiedGroup = false;
+
+	if (target.kind === "named") {
+		const targetGroup = doc.groups.find((g) => g.id === target.groupId && g.name !== "");
+		if (!targetGroup) return false;
+		targetGroupId = targetGroup.id;
+	} else {
+		const lastGroup = doc.groups.at(-1);
+		if (lastGroup && lastGroup.name === "") {
+			targetGroupId = lastGroup.id;
+		} else {
+			targetGroupId = generateId();
+			appendNewUnclassifiedGroup = true;
+		}
+	}
+
+	const nextGroups: JotGroup[] = [];
+	for (const group of doc.groups) {
+		const remainingCards = group.cards.filter((c) => !idSet.has(c.id));
+		const hadSelectedCards = remainingCards.length < group.cards.length;
+
+		if (!appendNewUnclassifiedGroup && group.id === targetGroupId) {
+			nextGroups.push({
+				id: group.id,
+				name: group.name,
+				cards: [...remainingCards, ...collectedCards],
+			});
+			continue;
+		}
+
+		if (hadSelectedCards && remainingCards.length === 0 && group.name !== "") {
+			continue;
+		}
+
+		nextGroups.push({
+			id: group.id,
+			name: group.name,
+			cards: remainingCards,
+		});
+	}
+
+	if (appendNewUnclassifiedGroup) {
+		nextGroups.push({
+			id: targetGroupId,
+			name: "",
+			cards: [...collectedCards],
+		});
+	}
+
+	if (isSameDocumentStructure(doc.groups, nextGroups)) {
+		return false;
+	}
+
+	doc.groups = nextGroups;
+	return true;
+}
+
+/**
+ * 指定されたカード群を、表示順を保ったまま既存の名前付きグループの末尾へ一括移動します。
+ * 移動によって空になった元の名前付きグループは除去されます。
+ *
+ * @param doc JotDocument ドキュメント
+ * @param cardIds 移動対象のカードIDリスト
+ * @param targetGroupId 移動先となる名前付きグループのID
+ * @returns 変更があった場合は true
+ */
+export function moveCardsToGroupInDoc(
+	doc: JotDocument,
+	cardIds: string[],
+	targetGroupId: string
+): boolean {
+	return moveCardsInDoc(doc, cardIds, { kind: "named", groupId: targetGroupId });
+}
+
+/**
+ * 選択されたカードのグループ所属を解除（Ungroup）し、表示順を保ってファイル末尾の未分類グループへ移動します。
+ * 操作前の末尾グループが未分類でない場合は、ファイル末尾に新しい未分類グループを作成します。
+ * 移動によって空になった元の名前付きグループは除去されます。
+ *
  * @param doc JotDocument ドキュメント
  * @param cardIds グループ解除対象のカードIDリスト
  * @returns 変更があった場合は true
  */
 export function ungroupCards(doc: JotDocument, cardIds: string[]): boolean {
-	if (cardIds.length === 0) return false;
-	const idSet = new Set(cardIds);
-	let modified = false;
+	return moveCardsInDoc(doc, cardIds, { kind: "unclassifiedTail" });
+}
 
-	for (let g = doc.groups.length - 1; g >= 0; g--) {
-		const group = doc.groups[g];
-		if (group.name === "") continue; // 未分類グループは対象外
-
-		const matchingCards = group.cards.filter((c) => idSet.has(c.id));
-		if (matchingCards.length === 0) continue;
-
-		modified = true;
-
-		if (matchingCards.length === group.cards.length) {
-			// スレッド内の全カードが対象の場合: 位置を移動させずその場でスレッド名のみクリア（解散）
-			group.name = "";
-		} else {
-			// スレッド内の一部カードのみ解除: スレッドから抜き出して未分類グループへ追加
-			group.cards = group.cards.filter((c) => !idSet.has(c.id));
-
-			let defaultGroup = doc.groups.find((gr) => gr.name === "");
-			if (!defaultGroup) {
-				defaultGroup = { id: generateId(), name: "", cards: [] };
-				doc.groups.unshift(defaultGroup);
-			}
-			defaultGroup.cards.push(...matchingCards);
-		}
-	}
-
-	return modified;
+/**
+ * 指定された名前付きグループをその場で解散し、未分類グループ（名前が空文字）にします。
+ * カードの位置・順序・IDは変更しません。
+ *
+ * @param doc JotDocument ドキュメント
+ * @param groupId 解散対象の名前付きグループID
+ * @returns 変更があった場合は true
+ */
+export function dissolveGroupInDoc(doc: JotDocument, groupId: string): boolean {
+	const group = doc.groups.find((g) => g.id === groupId);
+	if (!group || group.name === "") return false;
+	group.name = "";
+	return true;
 }
 
 /**

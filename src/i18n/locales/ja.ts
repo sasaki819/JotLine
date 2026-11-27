@@ -26,6 +26,8 @@ const ja: typeof en = {
 	DELETE_SELECTION: "選択したカードを削除",
 
 	// Context Menu items
+	MENU_SEND_TO_GROUP: "グループへ移動",
+	MENU_SEND_TO_GROUP_UNGROUP: "グループ解除",
 	MENU_GROUP_MULTI: (count: number) => `選択した${count}枚をグループ化`,
 	MENU_UNGROUP_MULTI: (count: number) => `選択した${count}枚のグループ化を解除`,
 	MENU_COPY_MULTI: (count: number) => `選択した${count}枚をMarkdownコピー`,

@@ -92,12 +92,11 @@
 	}
 
 	/**
-	 * グループを解散（グループ化解除）する
-	 * 所属する全カードをデフォルトグループ（未分類）に戻します。
+	 * グループをその場で解散（グループ名のみ解除）する
+	 * 所属するカードの位置や順序は維持したまま、未分類グループへ戻します。
 	 */
 	async function handleDissolveGroup() {
-		const cardIds = group.cards.map((c) => c.id);
-		await store.ungroupSelectedCards(cardIds);
+		await store.dissolveGroup(group.id);
 	}
 
 	/**
