@@ -18,7 +18,7 @@
 	import { get } from "svelte/store";
 	import { App, Component, MarkdownRenderer, Notice } from "obsidian";
 	import { exportToPureMarkdown } from "../parser";
-	import { startDrag, endDrag, JOTLINE_DRAG_MIME } from "../dnd";
+	import { startDrag, endDrag, activeDragSource, JOTLINE_DRAG_MIME } from "../dnd";
 	import type { JotCard } from "../types";
 	import type { JotStore } from "../store";
 	import { icon } from "../utils/icon";
@@ -240,17 +240,26 @@
 			store,
 			filePath: store.file.path,
 			cardIds: cards.map((c) => c.id),
+			draggedCardId: card.id,
 			text,
 			contents: cards.map((c) => c.content.trim()),
 		});
 	}
+
+	/** このカードが現在ドラッグ中かどうか */
+	$: isDragging =
+		$activeDragSource?.kind === "cards" &&
+		$activeDragSource.store === store &&
+		($activeDragSource.draggedCardId
+			? $activeDragSource.draggedCardId === card.id
+			: $activeDragSource.cardIds.includes(card.id));
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <div
-	class="jotline-card {isSelected ? 'is-selected' : ''}"
+	class="jotline-card {isSelected ? 'is-selected' : ''} {isDragging ? 'is-dragging' : ''}"
 	role="article"
 	aria-label="Note card"
 	draggable={!isEditing && !isReplying}
@@ -414,6 +423,10 @@
 		border-color: var(--interactive-accent);
 		background-color: var(--background-modifier-hover);
 		box-shadow: 0 0 0 2px var(--interactive-accent);
+	}
+
+	.jotline-card.is-dragging {
+		opacity: 0.45;
 	}
 
 	.jotline-card-header {
