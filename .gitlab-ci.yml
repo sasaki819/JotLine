@@ -1,27 +1,35 @@
 # GitLab CI for JotLine
 #
 # - Pipelines run only for merge requests, the default branch (main), and tags.
-# - test:    check-docs (ai-dev-standard), unit tests, type check (lint), release check (version tags only)
+# - test:    aico_doctor (AIco diagnostics), unit tests, type check (lint), release check (version tags only)
 # - build:   production build; main.js / manifest.json are kept as artifacts for 30 days
 # - release: upload to the Generic Package Registry and create a GitLab release (version tags vX.Y.Z only)
 #
 # Jobs that need Node.js use an explicit Node.js image, because the runner's default image (plain Alpine)
 # has no Node.js / npm.
 
-include:
-  - local: ci/ai-standard.gitlab-ci.yml   # ai-standard:check-docs (stage: test)
-
 workflow:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - if: $CI_COMMIT_TAG
-    - when: never   # e.g. pushes to item/* branches without a merge request
+    - when: never   # e.g. pushes to feature/* branches without a merge request
 
 stages:
   - test
   - build
   - release
+
+aico_doctor:
+  image: python:3.11-slim
+  stage: test
+  variables:
+    GIT_DEPTH: 0
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
+    - git fetch --no-tags origin main:refs/remotes/origin/main 2>/dev/null || true
+  script:
+    - python3 management/scripts/doctor.py
 
 # Common settings for jobs that need Node.js and the npm dependencies
 .node:

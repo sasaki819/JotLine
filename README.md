@@ -189,7 +189,7 @@ npm run build
 npx tsc --noEmit
 ```
 
-GitLab CI runs check-docs, the tests, the type check, and the production build for merge requests, the `main` branch, and tags (see `.gitlab-ci.yml`). The built `main.js` and `manifest.json` are kept as job artifacts of the `build` job for 30 days.
+GitLab CI runs AIco diagnostics (`aico_doctor`), the tests, the type check, and the production build for merge requests, the `main` branch, and tags (see `.gitlab-ci.yml`). The built `main.js` and `manifest.json` are kept as job artifacts of the `build` job for 30 days.
 
 ### 🚢 Releasing
 

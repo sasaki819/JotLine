@@ -13,99 +13,89 @@ TypeScript（ES2022）、Svelte 4、Obsidian Plugin API（minAppVersion 1.1.0、
 - ビルド: `npm run build`（開発時の監視ビルドは `npm run dev`）
 - テスト: `npm test`
 - lint: `npx tsc --noEmit`
+- 管理記録の診断: `tools/aico.sh doctor`
 
-<!-- プロジェクト固有のルールはこの位置（標準管理領域の外）に追記する。sync では変更されない。 -->
+## 設計書マスター
+
+- システム全体の最新設計は `docs/architecture/` に配置する（詳細は `docs/architecture/README.md` を参照）。
+- 機能追加・仕様変更を行うチケットでは、クローズ時の DoD に従い `docs/architecture/` の更新または不要判断を確認する。
 
 ## ブランチ運用
 
-- Item の作業開始前に `feature/<ID>-<slug>` ブランチを作成して切り替える。対象 Item の feature ブランチが既にある場合は、そのブランチで作業する。
-- コミット・push は対象の feature ブランチで行い、リモートにも同じ名前のブランチへ push する。
-- 「pushして」は対象の feature ブランチへの push と解釈する。
-- main への直接 push は、ユーザーが main を送信先として明示的に指定した場合のみ行う。
+- 統合ブランチは `main` とする。議事録・ADR・Runbook・チケット起票・全体一覧の再生成は `main` 上で行う。
+- 個別チケットの作業は `aico-ticket-start` で作成した作業ブランチ（既定: `feature/<チケットID>`）上で行う。対象チケットの作業ブランチが既にある場合は、そのブランチで作業する。
+- コミット・push は対象の作業ブランチで行い、リモートにも同じ名前のブランチへ push する。
+- 「pushして」は対象の作業ブランチへの push と解釈する。
+- `main` への直接 push は、ユーザーが `main` を送信先として明示的に指定した場合のみ行う。
 - push 前に現在のブランチと送信先を確認する。
 
-<!-- ai-standard:begin -->
-<!-- この区間は ai-dev-standard の管理対象。直接編集せず、ai-dev-standard 側を更新して sync すること。 -->
+<!-- AICO:BEGIN -->
 
-## 用語
+# AIco 協業ガイドライン
 
-用語は次の定義どおりに使い、別の言い方を混在させない。
+## 1. AIco の基本原則
 
-| 用語 | 定義 |
-|---|---|
-| Backlog | 未完了の作業項目の集合。`backlog/` 配下で管理する |
-| Item | Backlog の1項目。1ファイル = 1 Item。ID は4桁の連番（例：`0012`） |
-| Spec | 着手が決まった Item の詳細文書一式。`specs/<ID>-<slug>/` に置く |
-| requirements | Spec のうち、何を・なぜ作るかと受入基準 |
-| design | Spec のうち、どう作るか（その Item による変更分の設計） |
-| tasks | Spec のうち、実行単位の作業リスト。1 Task はおおむね1セッションで完結する粒度 |
-| progress | 作業ログ、判断ログ、中断点の記録（任意） |
-| Review | AIまたは人によるレビューの記録。Spec 配下の `reviews/` に置く |
-| Finding | Review 内の指摘1件 |
-| Discussion | Spec化前のブレインストーミングや議論の経緯記録。`discussions/` に置く |
-| ADR | Architecture Decision Record。重要な設計判断とその理由の記録。`docs/adr/` に置く |
-| マスター | 唯一の本体・最新の基準となる文書や資材 |
-| 原本 | コピー・派生物を作成する元の文書や資材 |
-| マスタードキュメント | システム全体の最新設計。`docs/architecture/` に置く。design の内容は Item 完了時にここへ反映する |
-| DoD | Definition of Done。Item を完了扱いにするための条件（下記） |
+AIco は、AI が作業を主導しつつ人間が重要な判断を行う協業ワークフローである。  
+以下の原則に従って作業を進めること。
 
-## ディレクトリの役割
+* **AI 主導と人間判断**：調査・起票・計画・設計・実装・レビュー準備は AI が主導し、着手合意（DoR）・レビュー指摘の採否選別・完了承認（DoD）・仕様矛盾の解消は必ず人間の判断を得る。
+* **管理ルートでの情報集約**：相談（議事録）・ADR・チケット・Runbook は管理ルート（既定：`management/`）配下で管理し、プロジェクト固有資産と明確に分離する。
+* **スクリプト分離**：記録作成・frontmatter 更新・一覧再生成・変更ファイル一覧更新・アーカイブ・エージェント同期・診断などの機械処理は、手作業で行わず `management/scripts/` 配下の共有スクリプトを使用する。
+* **ブランチ更新責務**：議事録・ADR・Runbook・チケット起票・全体一覧の再生成は統合ブランチ上で行い、個別チケットの進行・成果物作成・レビュー記録は作業ブランチ上で行う。
+* **AIco 由来領域の保護**：本ファイルのマーカー内（`<!-- AICO:BEGIN -->` 〜 `<!-- AICO:END -->`）、`CLAUDE.md`、`.agents/skills/aico-*`、`tools/aico.*`、`management/01.manual/`・`templates/`・`scripts/` は AIco 由来領域であり、導入先で直接改造しない。プロジェクト固有の規約や上書き方針は本ファイルのマーカー外へ記載する。
+* **進行案内と選択肢提示の原則**：工程完了・人間承認待ち・判断委譲の際はオープンな質問だけで終わらせず、推奨案を先頭に置いた 2〜4 件の具体的な番号付き選択肢を通常の Markdown リストで提示する（選択肢を独自タグ内に隠さず、人間が番号のみで応答できる形にする）。
+* **行動ガードレール**：
+  * 作業中に見つけたスコープ外の課題や不具合はその場で修正せず、発見事実を報告して別チケット起票を提案する。
+  * テストや検証コマンドが成功する前に完了報告やチェック（`[x]`）を入れず、テスト削除・無効化・条件緩和で通さない。
+  * 作業開始時は全記録を無差別に読み込まず、対象チケットや関連記録など必要最小限のコンテキストだけを読み込む。
 
-| パス | 役割 |
-|---|---|
-| `BACKLOG.md` | Backlog の一覧。backlog-index が自動生成する（手編集禁止） |
-| `backlog/items/` | 未完了の Item（`<ID>-<slug>.md`） |
-| `backlog/archive/` | status が done / dropped の Item |
-| `specs/<ID>-<slug>/` | Spec（requirements.md、design.md、tasks.md、progress.md、`reviews/`） |
-| `discussions/` | Discussion（`YYYY-MM-DD-<slug>.md`）。作成後は更新しない |
-| `docs/architecture/` | マスタードキュメント |
-| `docs/adr/` | ADR（`NNNN-<slug>.md`） |
-| `docs/ai-dev-standard-process.md` | 人間向けの運用フロー説明 |
-| `docs/ai-dev-standard-guide.md` | 人間向けの運用ガイド（プロンプト例付きのチュートリアル） |
-| `templates/` | 各文書の雛形。新しい文書は必ずここからコピーして作る |
-| `tools/ai-standard/` | backlog-index、check-docs（`.sh` と `.ps1`） |
-| `.claude/skills/`、`.agents/skills/` | スキル（同一内容のコピー。標準の管理対象） |
+## 2. 作業開始時の確認手順
 
-## 作業フロー
+新しいセッションを開始または再開する際は、以下の順で現在状況を実物照合すること。
 
-| # | 工程 | 担当 | スキル |
-|---|---|---|---|
-| 1 | Item を起票する | 人、または人の指示でAI | new-item |
-| 2 | Spec（requirements → design → tasks）を作成し、人が承認する | AI＋人 | new-spec |
-| 3 | Task を1つずつ実装し、検証・記録・コミットする | AI | implement-task |
-| 4 | 機械検証が通ったら、**別のコンテキスト**でAIレビューする | AI | self-review |
-| 5 | Finding を選別する（open → accepted / wontfix） | 人 | - |
-| 6 | accepted の Finding に対応する | AI | apply-review |
-| 7 | 人のレビュー指摘を Review に記録して対応する | AI | apply-review |
-| 8 | 対応結果を確認する | 人 | - |
-| 9 | PR／MR の本文を作成する（作成操作は人が行う） | AI | pr-draft |
-| 10 | 上位責任者が PR／MR をレビューする。設計変更は design.md や ADR に反映する | 人 | - |
-| 11 | マージ前に完了処理を行う | AI | close-item |
+1. `management/aico-manifest.json` を確認し、`management_root`・`integration_branch`・有効な `tools` を把握する。
+2. `management/index.md`（ダッシュボード）および現在の Git ブランチを確認する。
+3. 進行中の作業や次に取るべきアクションの判定には `aico-ticket-status` スキル（または `uv run management/scripts/ticket_status.py`）を使用する。
 
-## DoD
+※`management/index.md` は統合済み記録の一覧であり、未統合の作業ブランチ上の途中進捗は含まれない。作業中の最新状況は各作業ブランチのチケット記録で確認すること。
 
-- tasks.md の全 Task にチェックが入っている（マスタードキュメント反映と ADR 要否判断を含む）。
-- 該当 Spec の `reviews/` 配下に、状態が open または accepted の Finding が残っていない。
-- check-docs が成功する。
-- Item の status が done になり、`backlog/archive/` に移動されている。
+## 3. 工程別スキル案内表
 
-## Review の状態
+場面に応じて、`.agents/skills/` 配下の以下の `aico-*` スキルを使用すること。
 
-- `open`：未判定 / `accepted`：人が対応すると判定した / `wontfix`：人が対応しないと判定した（対応欄に理由が必須） / `fixed`：対応済み（対応欄に内容とコミットID）
-- AIは accepted の Finding だけに対応する。open を accepted / wontfix に変えるのは人の判断とする。
+| 区分 | スキル名 | 主な用途 |
+| :--- | :--- | :--- |
+| 横断・運用 | `aico-markdown-write` | 管理記録・文書作成時の Markdown 品質規約を適用する |
+| 横断・運用 | `aico-archive` | 完了済み記録を `archived/` へ移動しリンクと一覧を更新する |
+| 横断・運用 | `aico-doctor` | 環境・設定・同期・記録規約・リンク切れを総合診断する |
+| 横断・運用 | `aico-feedback` | AIco の問題点や改善要望を構造化 Markdown で出力する |
+| 相談・ADR・Runbook | `aico-discuss` | 相談・構想の壁打ちを行い議事録へ構造化して記録する |
+| 相談・ADR・Runbook | `aico-create-adr` | 複数作業に影響する設計判断を ADR として記録する |
+| 相談・ADR・Runbook | `aico-create-runbook` | 繰り返し実施する定常作業を手順書として作成・改訂する |
+| 相談・ADR・Runbook | `aico-runbook-run` | Runbook 手順書に従って実施し、実施記録と添付物を残す |
+| チケット | `aico-create-ticket` | 統合ブランチ上でチケットを起票し概要・AC・DoR を整える |
+| チケット | `aico-ticket-start` | DoR を確定し作業ブランチを作成・切替して対応を開始する |
+| チケット | `aico-ticket-plan` | 現状調査と仕様合意を行い `plan.md` を策定する |
+| チケット | `aico-ticket-design` | 合意仕様にもとづき設計書・仕様書を作成・更新する |
+| チケット | `aico-ticket-implement` | 計画と設計に沿って実装・テスト検証を進める |
+| チケット | `aico-ticket-close` | 変更ファイル更新・DoD 確認・完了確定および統合後の一覧再生成を行う |
+| チケット | `aico-ticket-pr` | 作業ブランチの差分と記録から PR/MR 用の Title・Description を出力する（任意） |
+| チケット | `aico-ticket-cancel` | 人間承認を得てチケットを中止し統合側へ反映する |
+| チケット | `aico-ticket-status` | 実物照合で現在地を把握し次に実行すべきスキルを提案する |
+| レビュー | `aico-review` | 独立コンテキストでのレビューまたは人間レビュー指摘の記録を行う |
+| レビュー | `aico-review-triage` | 未選別の指摘を人間へ提示し採否判断を記録する |
+| レビュー | `aico-review-fix` | 人間が採用した指摘を修正し経緯を記録する |
+| レビュー | `aico-review-recheck` | 独立コンテキストで修正内容を実物照合し解消確認・差し戻しを行う |
 
-## AIへの行動規則
+## 4. ユーザーガイド・マニュアルへの参照
 
-- Backlog の優先度をAIが決めない。
-- 作業中に見つけた別の課題は、その場で直さず新しい Item として起票を提案する。
-- `BACKLOG.md` を手で編集しない。Item を変更したら backlog-index を実行して再生成する。
-- `.claude/skills/` と `.agents/skills/` を直接編集しない（標準の管理対象のため）。
-- 作業の開始時には、対象 Item の Spec 配下だけを読む。Backlog 全体はコンテキストに読み込まない。
-- Task が完了したら、tasks.md のチェックと progress.md を更新する。
-- 「完了」の報告は、検証コマンドが成功した場合に限る。
+導入手順・最初の1チケットの進め方・日常運用の早見表・FAQ は以下のガイドを参照すること（初見ユーザーから使い方を尋ねられた場合もこれらを案内する）。
 
-## スクリプト
+* [AIco ユーザーガイド目次](management/01.manual/index.md)
+* [Getting Started（導入と初期設定）](management/01.manual/01.getting-started.md)
+* [チュートリアル（最初の1チケットを回してみよう）](management/01.manual/02.tutorial.md)
+* [チートシート（普段使いの早見表）](management/01.manual/03.cheatsheet.md)
+* [使いこなしガイド・FAQ](management/01.manual/04.user-guide.md)
+* [おすすめ `worker_models` 設定例](management/01.manual/05.worker-models.md)
 
-- Linux / macOS：`bash tools/ai-standard/backlog-index.sh`、`bash tools/ai-standard/check-docs.sh`
-- Windows：`powershell -ExecutionPolicy Bypass -File tools/ai-standard/backlog-index.ps1`（check-docs も同様）
-<!-- ai-standard:end -->
+<!-- AICO:END -->
