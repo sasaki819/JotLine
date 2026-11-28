@@ -1,11 +1,11 @@
 ---
 id: 20261124-120014-ticket-keep-selection-after-group-move
 title: グループ移動直後もカードの選択状態を維持する
-status: open
+status: done
 created: 2026-11-24 12:00:14
-updated: 2026-11-24 12:00:14
-phase: drafting
-phase_status: working
+updated: 2026-11-28 22:36:15
+phase: closing
+phase_status: done
 branch: feature/20261124-120014-ticket-keep-selection-after-group-move
 parent: null
 children: []
@@ -28,37 +28,41 @@ adrs: []
 
 ## AC（受け入れ条件）
 
-* [ ] 単一カードまたは複数カードをグループへ移動（またはグループ解除）した直後も、移動先にある対象カードの選択状態が維持される。
-* [ ] 選択維持後も、カードクリック・Escape キー・選択バーの解除操作などで選択状態を解除できる。
-* [ ] 保存に失敗してモデルを復元した場合、存在しないカード ID が選択状態に残らない。
+* [x] 単一カードまたは複数カードをグループへ移動（またはグループ解除）した直後も、移動先にある対象カードの選択状態が維持される。
+* [x] 選択維持後も、カードクリック・Escape キー・選択バーの解除操作などで選択状態を解除できる。
+* [x] 保存に失敗してモデルを復元した場合、存在しないカード ID が選択状態に残らない。
 
 ## DoR（着手合意）
 
-* **任せる範囲**：着手時に確認する
+* **任せる範囲**：設計・実装・自動テスト・独立レビュー・DoD 確認・MR 作成・CI 通過後のスカッシュマージまで一括委任（2026-11-28 ユーザー合意済み）
 * **未決事項**：なし
-* **着手合意**：未合意
+* **着手合意**：合意済み（2026-11-28）
 
 ## 現在地
 
-* **状況**：起票完了（`ai-dev-standard` から移行）
+* **状況**：完了（クローズ済み・MR マージ待ち）
 * **ブロッカー（確認待ち）**：なし
-* **次に取る行動**：DoR を確認し `aico-ticket-start` で作業ブランチを作成する
+* **次に取る行動**：作業ブランチを push・MR 作成し、CI 成功後にスカッシュマージして `main` 側の一覧を再生成する
 
 ## 変更ファイル
 
 <!-- AICO:AUTO:BEGIN:changed-files -->
 
-変更されたプロジェクト資産はない。
+| 種別 | パス |
+| :--- | :--- |
+| `M` | `docs/architecture/03.UI-UX-Specification.md` |
+| `M` | `scripts/card-context-menu.test.mjs` |
+| `M` | `src/ui/App.svelte` |
 
 <!-- AICO:AUTO:END:changed-files -->
 
 ## DoD（完了の定義）
 
-* **AC 検証結果と根拠**：未実施
-* **未検証項目と人の判断結果**：なし
-* **プロジェクト側設計書・仕様書の更新確認**：未確認（不要時は理由を記載する）
-* **ADR の要否判断**：未確認（不要時は理由、作成時は相対リンクを記載する）
-* **関連記録への導線確認**：未確認
+* **AC 検証結果と根拠**：全 AC 達成。`src/ui/App.svelte` の `handleMoveCardsToGroup()`・`handleUngroupCards()`・`pruneSelection()` を修正し、`scripts/card-context-menu.test.mjs`（7 件）で単一／複数移動・解除後の選択維持、カードクリック・Escape・選択バー解除ボタンによる解除、保存失敗復元時の無効 ID／`lastSelectedCardId` 除外、`anySelectedInGroup` 追従、no-op 時の選択維持を検証、`npm test`（13 files / 143 tests）・`npm run build`・`npx tsc --noEmit`・`tools/aico.sh doctor --strict` 全通過および独立レビュー・独立再確認で未解決指摘 0 件を確認。
+* **未検証項目と人の判断結果**：Obsidian 実機確認は未実施（自動テスト通過＋事前合意により完了）。
+* **プロジェクト側設計書・仕様書の更新確認**：更新済み（`docs/architecture/03.UI-UX-Specification.md` の右クリックコンテキストメニュー「移動・解除後の選択扱い」を新仕様へ更新）。
+* **ADR の要否判断**：不要（UI コンポーネント内の選択解除タイミングの変更のみで複数作業へ波及するアーキテクチャ判断の変更がないため）。
+* **関連記録への導線確認**：確認済み（発見契機チケット `../archived/20261104-221107-ticket-send-cards-to-group/index.md` への相対リンク有効、子チケット・議事録・ADR なし）。
 
 ## 親子チケット・関連
 

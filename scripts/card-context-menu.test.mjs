@@ -201,6 +201,12 @@ export class Menu {
 		}));
 	}
 
+	function selectedCardTexts() {
+		return Array.from(document.querySelectorAll(".jotline-card.is-selected")).map((el) =>
+			el.querySelector(".jotline-card-content").textContent.trim()
+		);
+	}
+
 	async function openContextMenu(cardText) {
 		menuState.instances = [];
 		const el = cardElByText(cardText);
@@ -210,7 +216,7 @@ export class Menu {
 		return { menu: menuState.instances[0], event };
 	}
 
-	it("moves a single right-clicked card to a named group tail and clears selection", async () => {
+	it("moves a single right-clicked card to a named group tail and keeps selection", async () => {
 		const { menu } = await openContextMenu("U1");
 		const sendItem = menuItems(menu).find((item) => item.title === "グループへ移動");
 		expect(sendItem).toBeTruthy();
@@ -225,7 +231,8 @@ export class Menu {
 			{ name: "Alpha", cards: ["A1", "A2", "U1"] },
 			{ name: "Beta", cards: ["B1"] },
 		]);
-		expect(document.querySelector(".jotline-selection-bar")).toBeNull();
+		expect(document.querySelector(".jotline-selection-bar")).not.toBeNull();
+		expect(selectedCardTexts()).toEqual(["U1"]);
 	});
 
 	it("moves multiple selected cards in document order even when selected in reverse, and targets only the clicked card when right-clicking an unselected card", async () => {
@@ -248,7 +255,16 @@ export class Menu {
 			{ name: "", cards: ["U2"] },
 			{ name: "Alpha", cards: ["A2", "U1", "A1", "B1"] },
 		]);
+		expect(document.querySelector(".jotline-selection-bar")).not.toBeNull();
+		expect(selectedCardTexts()).toEqual(["U1", "A1", "B1"]);
+
+		// 選択バーの解除ボタンで選択をクリアできる
+		document.querySelector('.jotline-selection-header button[data-icon="x"]').dispatchEvent(
+			new dom.window.MouseEvent("click", { bubbles: true })
+		);
+		await tick();
 		expect(document.querySelector(".jotline-selection-bar")).toBeNull();
+		expect(selectedCardTexts()).toEqual([]);
 
 		// 複数選択中に未選択カードを右クリックした場合は、その1枚だけが対象になる
 		for (const text of ["U2", "A2"]) {
@@ -265,6 +281,7 @@ export class Menu {
 			{ name: "", cards: ["U2"] },
 			{ name: "Alpha", cards: ["A2", "A1", "B1", "U1"] },
 		]);
+		expect(selectedCardTexts()).toEqual(["U1"]);
 	});
 
 	it("supports child menu fallback when setSubmenu is unavailable and does nothing when closed without selection", async () => {
@@ -293,7 +310,8 @@ export class Menu {
 			{ name: "Alpha", cards: ["A2"] },
 			{ name: "Beta", cards: ["B1", "A1"] },
 		]);
-		expect(document.querySelector(".jotline-selection-bar")).toBeNull();
+		expect(document.querySelector(".jotline-selection-bar")).not.toBeNull();
+		expect(selectedCardTexts()).toEqual(["A1"]);
 	});
 
 	it("clears selection and restores card placement when saving fails", async () => {
@@ -311,6 +329,64 @@ export class Menu {
 			{ name: "Beta", cards: ["B1"] },
 		]);
 		expect(document.querySelector(".jotline-selection-bar")).toBeNull();
+		expect(selectedCardTexts()).toEqual([]);
+
+		// グループ解除の保存失敗時も復元後に存在しないカードIDが選択状態に残らない
+		vault.failNextModify();
+		const { menu: ungroupMenu } = await openContextMenu("A1");
+		const ungroupItem = menuItems(ungroupMenu).find((item) => item.title === "グループ化を解除（未分類に戻す）");
+		await ungroupItem.triggerClick();
+		await tick();
+		expect(snapshot()).toEqual([
+			{ name: "", cards: ["U1", "U2"] },
+			{ name: "Alpha", cards: ["A1", "A2"] },
+			{ name: "Beta", cards: ["B1"] },
+		]);
+		expect(document.querySelector(".jotline-selection-bar")).toBeNull();
+		expect(selectedCardTexts()).toEqual([]);
+	});
+
+	it("allows clearing maintained selection via card click, Escape key, and selection bar close button", async () => {
+		// 1) 移動後にカードクリック（修飾キーなし）で選択解除
+		const { menu: m1 } = await openContextMenu("U1");
+		await menuItems(menuItems(m1).find((i) => i.title === "グループへ移動").submenu)
+			.find((i) => i.title === "Alpha")
+			.triggerClick();
+		await tick();
+		expect(selectedCardTexts()).toEqual(["U1"]);
+
+		cardElByText("U1").dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+		await tick();
+		expect(document.querySelector(".jotline-selection-bar")).toBeNull();
+		expect(selectedCardTexts()).toEqual([]);
+
+		// 2) 解除後に Escape キーで選択解除
+		const { menu: m2 } = await openContextMenu("U1");
+		await menuItems(m2).find((i) => i.title === "グループ化を解除（未分類に戻す）").triggerClick();
+		await tick();
+		expect(selectedCardTexts()).toEqual(["U1"]);
+
+		document.querySelector(".jotline-app-container").dispatchEvent(
+			new dom.window.KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true })
+		);
+		await tick();
+		expect(document.querySelector(".jotline-selection-bar")).toBeNull();
+		expect(selectedCardTexts()).toEqual([]);
+
+		// 3) 移動後に選択バーの解除ボタン（x）で選択解除
+		const { menu: m3 } = await openContextMenu("B1");
+		await menuItems(menuItems(m3).find((i) => i.title === "グループへ移動").submenu)
+			.find((i) => i.title === "Alpha")
+			.triggerClick();
+		await tick();
+		expect(selectedCardTexts()).toEqual(["B1"]);
+
+		document.querySelector('.jotline-selection-header button[data-icon="x"]').dispatchEvent(
+			new dom.window.MouseEvent("click", { bubbles: true })
+		);
+		await tick();
+		expect(document.querySelector(".jotline-selection-bar")).toBeNull();
+		expect(selectedCardTexts()).toEqual([]);
 	});
 
 	it("uses the same tail-placement ungroup flow from submenu Ungroup, existing single/multi context menu Ungroup, and selection bar Ungroup", async () => {
@@ -325,6 +401,7 @@ export class Menu {
 			{ name: "Beta", cards: ["B1"] },
 			{ name: "", cards: ["A1"] },
 		]);
+		expect(selectedCardTexts()).toEqual(["A1"]);
 
 		// 2) 既存の単一カード右クリック「グループ化を解除（未分類に戻す）」で A2 を末尾未分類へ移動（Alpha は空になり除去）
 		const { menu: singleMenu } = await openContextMenu("A2");
@@ -337,6 +414,11 @@ export class Menu {
 			{ name: "Beta", cards: ["B1"] },
 			{ name: "", cards: ["A1", "A2"] },
 		]);
+		expect(selectedCardTexts()).toEqual(["A2"]);
+
+		// 次の複数選択テストのため選択解除
+		cardElByText("A2").dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+		await tick();
 
 		// 3) 既存の複数選択右クリック「選択した2枚のグループ化を解除」で U1 と B1 を末尾未分類へ移動
 		for (const text of ["B1", "U1"]) {
@@ -352,6 +434,11 @@ export class Menu {
 			{ name: "", cards: ["U2"] },
 			{ name: "", cards: ["A1", "A2", "U1", "B1"] },
 		]);
+		expect(selectedCardTexts()).toEqual(["U1", "B1"]);
+
+		// 選択を解除してから 4) の検証へ
+		cardElByText("U1").dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+		await tick();
 
 		// 4) 選択アクションバーのグループ解除ボタンも同じ末尾配置を使う（名前付きグループを作ってから解除）
 		await store.groupSelectedCards(
@@ -365,8 +452,70 @@ export class Menu {
 		const barUngroupBtn = document.querySelector('.jotline-selection-actions button[data-icon="folder-minus"]');
 		expect(barUngroupBtn).not.toBeNull();
 		barUngroupBtn.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+		await new Promise((resolve) => setTimeout(resolve, 0));
 		await tick();
-		await Promise.resolve();
 		expect(snapshot().at(-1)).toEqual({ name: "", cards: ["A2", "U1", "B1", "U2"] });
+		expect(document.querySelector(".jotline-selection-bar")).not.toBeNull();
+		expect(selectedCardTexts()).toEqual(["U2"]);
+		expect(document.querySelector('.jotline-selection-actions button[data-icon="folder-minus"]')).toBeNull();
+	});
+
+	it("keeps anySelectedInGroup, Shift+Click range anchor, and no-op move/ungroup selection state consistent", async () => {
+		// 1) 未分類カード U1 を名前付きグループ Alpha へ移動すると、選択維持のまま選択バーの解除ボタンが表示される
+		const { menu: m1 } = await openContextMenu("U1");
+		expect(document.querySelector('.jotline-selection-actions button[data-icon="folder-minus"]')).toBeNull();
+		await menuItems(menuItems(m1).find((i) => i.title === "グループへ移動").submenu)
+			.find((i) => i.title === "Alpha")
+			.triggerClick();
+		await tick();
+		expect(selectedCardTexts()).toEqual(["U1"]);
+		expect(document.querySelector('.jotline-selection-actions button[data-icon="folder-minus"]')).not.toBeNull();
+
+		// 2) すでに Alpha 末尾にある U1 を再度 Alpha へ移動（no-op）しても保存されず選択状態は維持される
+		vault.modify.mockClear();
+		const { menu: mNoop } = await openContextMenu("U1");
+		await menuItems(menuItems(mNoop).find((i) => i.title === "グループへ移動").submenu)
+			.find((i) => i.title === "Alpha")
+			.triggerClick();
+		await tick();
+		expect(vault.modify).not.toHaveBeenCalled();
+		expect(selectedCardTexts()).toEqual(["U1"]);
+
+		// 3) 移動後の新しい並び順（U2, A1, A2, U1, B1）で U1 を起点に B1 を Shift+Click すると [U1, B1] が範囲選択される
+		cardElByText("B1").dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true, shiftKey: true }));
+		await tick();
+		expect(selectedCardTexts()).toEqual(["U1", "B1"]);
+
+		// 4) [U1, B1] をグループ解除すると、選択維持のまま全選択カードが未分類になり解除ボタンが消える
+		const barUngroup = document.querySelector('.jotline-selection-actions button[data-icon="folder-minus"]');
+		barUngroup.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		await tick();
+		expect(selectedCardTexts()).toEqual(["U1", "B1"]);
+		expect(document.querySelector('.jotline-selection-actions button[data-icon="folder-minus"]')).toBeNull();
+
+		// 5) すでに末尾未分類に同じ順で並んでいる [U1, B1] を再解除（no-op）しても保存されず選択維持
+		vault.modify.mockClear();
+		const { menu: mUngroupNoop } = await openContextMenu("U1");
+		await menuItems(menuItems(mUngroupNoop).find((i) => i.title === "グループへ移動").submenu)
+			.find((i) => i.title === "グループ解除")
+			.triggerClick();
+		await tick();
+		expect(vault.modify).not.toHaveBeenCalled();
+		expect(selectedCardTexts()).toEqual(["U1", "B1"]);
+
+		// 6) 保存失敗でモデル復元後、古い lastSelectedCardId が残らず Shift+Click で誤った範囲選択にならない
+		vault.failNextModify();
+		const { menu: mFail } = await openContextMenu("U1");
+		await menuItems(menuItems(mFail).find((i) => i.title === "グループへ移動").submenu)
+			.find((i) => i.title === "Alpha")
+			.triggerClick();
+		await tick();
+		expect(selectedCardTexts()).toEqual([]);
+		expect(document.querySelector(".jotline-selection-bar")).toBeNull();
+
+		cardElByText("A2").dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true, shiftKey: true }));
+		await tick();
+		expect(selectedCardTexts()).toEqual([]);
 	});
 });
