@@ -9,6 +9,27 @@ export function generateId(): string {
 }
 
 /**
+ * 不要な空の未分類グループを除去し、ドキュメントにグループが1つも残らない場合のみ
+ * 初期状態となる空の未分類グループを1つ確保します。
+ *
+ * - 名前付きグループ（`group.name !== ""`）は空であっても維持します。
+ * - 他にグループが存在する場合、カード0枚の未分類グループ（`group.name === "" && group.cards.length === 0`）をすべて除去します。
+ * - 除去後にグループが0件となる場合、既存の先頭空未分類グループがあればそのIDを維持し、なければ新規生成します。
+ *
+ * @param doc 正規化対象のJotDocument
+ */
+export function cleanupEmptyUnclassifiedGroups(doc: JotDocument): void {
+	const firstEmptyUnclassified = doc.groups.find((g) => g.name === "" && g.cards.length === 0);
+	const remaining = doc.groups.filter((g) => !(g.name === "" && g.cards.length === 0));
+	if (remaining.length > 0) {
+		doc.groups = remaining;
+		return;
+	}
+	doc.groups = [firstEmptyUnclassified ?? { id: generateId(), name: "", cards: [] }];
+}
+
+
+/**
  * HTMLコメントマーカーを含む生のMarkdown文字列をパースし、構造化されたJotDocumentオブジェクトに変換します。
  * 
  * 【認識マーカー仕様】:
@@ -108,16 +129,9 @@ export function parseJotDocument(markdown: string): JotDocument {
 	// ファイル末尾に残ったカードおよびグループを確定
 	commitGroup();
 
-	// グループが1つも生成されなかった場合のフォールバック（未分類空グループ）
-	if (groups.length === 0) {
-		groups.push({
-			id: generateId(),
-			name: "",
-			cards: [],
-		});
-	}
-
-	return { groups };
+	const doc: JotDocument = { groups };
+	cleanupEmptyUnclassifiedGroups(doc);
+	return doc;
 }
 
 /**
@@ -209,6 +223,7 @@ export function mergeCardWithPrevious(doc: JotDocument, cardId: string): boolean
 						if (group.cards.length === 0 && group.name !== "") {
 							doc.groups.splice(g, 1);
 						}
+						cleanupEmptyUnclassifiedGroups(doc);
 						return true;
 					}
 				}
@@ -300,7 +315,7 @@ export function groupSelectedCards(
 			const afterCards = group.cards.slice(firstOccurrence.cardIndex).filter((c) => !idSet.has(c.id));
 
 			// 起点より前のカード群があれば既存グループとして残す
-			if (beforeCards.length > 0 || (group.name === "" && afterCards.length === 0 && newGroups.length === 0)) {
+			if (beforeCards.length > 0) {
 				newGroups.push({
 					id: generateId(),
 					name: group.name,
@@ -332,15 +347,7 @@ export function groupSelectedCards(
 	}
 
 	doc.groups = newGroups;
-
-	// ドキュメントが空にならないようフォールバック
-	if (doc.groups.length === 0) {
-		doc.groups.push({
-			id: generateId(),
-			name: "",
-			cards: [],
-		});
-	}
+	cleanupEmptyUnclassifiedGroups(doc);
 
 	return true;
 }
@@ -439,11 +446,14 @@ function moveCardsInDoc(doc: JotDocument, cardIds: string[], target: MoveTarget)
 		});
 	}
 
-	if (isSameDocumentStructure(doc.groups, nextGroups)) {
+	const nextDoc: JotDocument = { groups: nextGroups };
+	cleanupEmptyUnclassifiedGroups(nextDoc);
+
+	if (isSameDocumentStructure(doc.groups, nextDoc.groups)) {
 		return false;
 	}
 
-	doc.groups = nextGroups;
+	doc.groups = nextDoc.groups;
 	return true;
 }
 
@@ -489,6 +499,7 @@ export function dissolveGroupInDoc(doc: JotDocument, groupId: string): boolean {
 	const group = doc.groups.find((g) => g.id === groupId);
 	if (!group || group.name === "") return false;
 	group.name = "";
+	cleanupEmptyUnclassifiedGroups(doc);
 	return true;
 }
 
@@ -521,13 +532,7 @@ export function deleteGroupDoc(doc: JotDocument, groupId: string): boolean {
 	const idx = doc.groups.findIndex((g) => g.id === groupId);
 	if (idx === -1) return false;
 	doc.groups.splice(idx, 1);
-	if (doc.groups.length === 0) {
-		doc.groups.push({
-			id: generateId(),
-			name: "",
-			cards: [],
-		});
-	}
+	cleanupEmptyUnclassifiedGroups(doc);
 	return true;
 }
 
@@ -611,12 +616,13 @@ export function insertGroupAfterInDoc(
 	const cards = createCards(contents);
 	if (cards.length === 0) return false;
 	doc.groups.splice(idx + 1, 0, { id: generateId(), name: trimmedName, cards });
+	cleanupEmptyUnclassifiedGroups(doc);
 	return true;
 }
 
 /**
  * 指定したカードを一括削除します。
- * カードが0枚になったスレッドグループ（名前付き）は削除し、未分類グループは空でも残します。
+ * カードが0枚になったスレッドグループ（名前付き）と、他にグループが存在する状態の空の未分類グループは削除します。
  * 全グループがなくなった場合は空の未分類グループを1つ確保します。
  *
  * @param doc JotDocument ドキュメント
@@ -636,8 +642,8 @@ export function removeCardsFromDoc(doc: JotDocument, cardIds: string[]): boolean
 			doc.groups.splice(g, 1);
 		}
 	}
-	if (doc.groups.length === 0) {
-		doc.groups.push({ id: generateId(), name: "", cards: [] });
+	if (removed) {
+		cleanupEmptyUnclassifiedGroups(doc);
 	}
 	return removed;
 }

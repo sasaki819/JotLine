@@ -18,6 +18,7 @@ import {
 	insertCardsInDoc,
 	insertGroupAfterInDoc,
 	removeCardsFromDoc,
+	cleanupEmptyUnclassifiedGroups,
 } from "./parser";
 import { t } from "./i18n";
 import { UndoHistory } from "./history";
@@ -329,6 +330,7 @@ export class JotStore {
 				content: text,
 			});
 
+			cleanupEmptyUnclassifiedGroups(current);
 			return current;
 		});
 
@@ -384,6 +386,7 @@ export class JotStore {
 				};
 
 				current.groups.push(newGroup);
+				cleanupEmptyUnclassifiedGroups(current);
 			} else {
 				// 既存スレッドへの返信: 同一スレッドの末尾へ追記
 				parentGroup.cards.push({
@@ -461,6 +464,7 @@ export class JotStore {
 					if (current.groups[g].cards.length === 0 && current.groups[g].name !== "") {
 						current.groups.splice(g, 1);
 					}
+					cleanupEmptyUnclassifiedGroups(current);
 					break;
 				}
 			}
@@ -587,6 +591,7 @@ export class JotStore {
 				});
 			}
 
+			cleanupEmptyUnclassifiedGroups(current);
 			return current;
 		});
 
@@ -656,9 +661,7 @@ export class JotStore {
 					current.groups.splice(g, 1);
 				}
 			}
-			if (current.groups.length === 0) {
-				current.groups.push({ id: generateId(), name: "", cards: [] });
-			}
+			cleanupEmptyUnclassifiedGroups(current);
 			return current;
 		});
 

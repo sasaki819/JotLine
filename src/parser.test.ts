@@ -502,10 +502,9 @@ describe("Batch move, ungroup and thread dissolve operations", () => {
 		};
 
 		expect(ungroupCards(doc, ["c3", "c1", "c0"])).toBe(true);
-		expect(doc.groups.map((g) => g.id)).toEqual(["g0", "g1", "g2"]);
-		expect(doc.groups[0].cards).toEqual([]);
-		expect(doc.groups[1].cards.map((c) => c.id)).toEqual(["c2"]);
-		expect(doc.groups[2].cards.map((c) => c.id)).toEqual(["c0", "c1", "c3"]);
+		expect(doc.groups.map((g) => g.id)).toEqual(["g1", "g2"]);
+		expect(doc.groups[0].cards.map((c) => c.id)).toEqual(["c2"]);
+		expect(doc.groups[1].cards.map((c) => c.id)).toEqual(["c0", "c1", "c3"]);
 	});
 
 	it("creates a new tail unclassified group even if removing an emptied named group exposes an earlier unclassified group", () => {
@@ -638,5 +637,76 @@ describe("D&D document operations", () => {
 		const doc = sampleDoc();
 		expect(removeCardsFromDoc(doc, ["missing"])).toBe(false);
 		expect(doc.groups.length).toBe(2);
+	});
+});
+
+describe("Empty unclassified group cleanup", () => {
+	const shape = (doc: { groups: { name: string; cards: { content: string }[] }[] }) =>
+		doc.groups.map((g) => ({ name: g.name, cards: g.cards.map((c) => c.content) }));
+
+	it("drops stray empty unclassified groups on parse when other groups exist", () => {
+		const doc = parseJotDocument("<!-- group -->\n\n<!-- group: Alpha -->\n<!-- card -->\nA1\n\n<!-- group -->\n");
+		expect(shape(doc)).toEqual([{ name: "Alpha", cards: ["A1"] }]);
+		expect(shape(parseJotDocument(serializeJotDocument(doc)))).toEqual(shape(doc));
+	});
+
+	it("removes emptied unclassified group when moving all its cards into a named group", () => {
+		const doc = {
+			groups: [
+				{ id: "g0", name: "", cards: [{ id: "c1", content: "U1" }] },
+				{ id: "g1", name: "Alpha", cards: [{ id: "c2", content: "A1" }] },
+			],
+		};
+		expect(moveCardsToGroupInDoc(doc, ["c1"], "g1")).toBe(true);
+		expect(shape(doc)).toEqual([{ name: "Alpha", cards: ["A1", "U1"] }]);
+		expect(shape(parseJotDocument(serializeJotDocument(doc)))).toEqual(shape(doc));
+	});
+
+	it("removes emptied unclassified group when grouping all its cards into a new thread", () => {
+		const doc = {
+			groups: [
+				{ id: "g0", name: "", cards: [{ id: "c1", content: "U1" }, { id: "c2", content: "U2" }] },
+			],
+		};
+		expect(groupSelectedCards(doc, ["c1", "c2"], "Topic")).toBe(true);
+		expect(shape(doc)).toEqual([{ name: "Topic", cards: ["U1", "U2"] }]);
+		expect(shape(parseJotDocument(serializeJotDocument(doc)))).toEqual(shape(doc));
+	});
+
+	it("removes emptied unclassified group after mergeCardWithPrevious, removeCardsFromDoc, dissolveGroupInDoc, and insertGroupAfterInDoc", () => {
+		// mergeCardWithPrevious
+		const doc1 = {
+			groups: [
+				{ id: "g1", name: "Alpha", cards: [{ id: "c1", content: "A1" }] },
+				{ id: "g2", name: "", cards: [{ id: "c2", content: "U1" }] },
+			],
+		};
+		expect(mergeCardWithPrevious(doc1, "c2")).toBe(true);
+		expect(shape(doc1)).toEqual([{ name: "Alpha", cards: ["A1\nU1"] }]);
+
+		// removeCardsFromDoc (when another group remains)
+		const doc2 = {
+			groups: [
+				{ id: "g1", name: "", cards: [{ id: "c1", content: "U1" }] },
+				{ id: "g2", name: "Alpha", cards: [{ id: "c2", content: "A1" }] },
+			],
+		};
+		expect(removeCardsFromDoc(doc2, ["c1"])).toBe(true);
+		expect(shape(doc2)).toEqual([{ name: "Alpha", cards: ["A1"] }]);
+
+		// dissolveGroupInDoc on an empty named group alongside another group
+		const doc3 = {
+			groups: [
+				{ id: "g1", name: "EmptyNamed", cards: [] },
+				{ id: "g2", name: "Alpha", cards: [{ id: "c2", content: "A1" }] },
+			],
+		};
+		expect(dissolveGroupInDoc(doc3, "g1")).toBe(true);
+		expect(shape(doc3)).toEqual([{ name: "Alpha", cards: ["A1"] }]);
+
+		// insertGroupAfterInDoc on an initially empty document
+		const doc4 = parseJotDocument("");
+		expect(insertGroupAfterInDoc(doc4, doc4.groups[0].id, "Imported", ["X"])).toBe(true);
+		expect(shape(doc4)).toEqual([{ name: "Imported", cards: ["X"] }]);
 	});
 });
