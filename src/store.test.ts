@@ -677,3 +677,56 @@ describe("JotStore empty unclassified group cleanup", () => {
 		expect(docOf(s2.store).groups[0].id).toBe(initialGroupId);
 	});
 });
+
+describe("JotStore reorderCard slot parity", () => {
+	it("matches visual pre-removal slot indices for same-group upward, downward, and no-op moves", async () => {
+		const initial = "<!-- card -->\nA\n\n<!-- card -->\nB\n\n<!-- card -->\nC\n";
+
+		// Drag A (index 0) to slot 2 (between B and C) -> [B, A, C]
+		const s1 = await createStore(initial);
+		const g1 = get(s1.store.doc).groups[0];
+		await s1.store.reorderCard(g1.cards[0].id, g1.id, 2);
+		expect(get(s1.store.doc).groups[0].cards.map((c) => c.content)).toEqual(["B", "A", "C"]);
+
+		// Drag A (index 0) to slot 3 (after C) -> [B, C, A]
+		const s2 = await createStore(initial);
+		const g2 = get(s2.store.doc).groups[0];
+		await s2.store.reorderCard(g2.cards[0].id, g2.id, 3);
+		expect(get(s2.store.doc).groups[0].cards.map((c) => c.content)).toEqual(["B", "C", "A"]);
+
+		// Drag A (index 0) to slot 1 (right after A = current position) -> unchanged, no history entry
+		const s3 = await createStore(initial);
+		const g3 = get(s3.store.doc).groups[0];
+		await s3.store.reorderCard(g3.cards[0].id, g3.id, 1);
+		expect(get(s3.store.doc).groups[0].cards.map((c) => c.content)).toEqual(["A", "B", "C"]);
+		expect(get(s3.store.historyState).canUndo).toBe(false);
+
+		// Drag C (index 2) to slot 0 (before A) -> [C, A, B]
+		const s4 = await createStore(initial);
+		const g4 = get(s4.store.doc).groups[0];
+		await s4.store.reorderCard(g4.cards[2].id, g4.id, 0);
+		expect(get(s4.store.doc).groups[0].cards.map((c) => c.content)).toEqual(["C", "A", "B"]);
+
+		// Drag C (index 2) to slot 1 (between A and B) -> [A, C, B]
+		const s5 = await createStore(initial);
+		const g5 = get(s5.store.doc).groups[0];
+		await s5.store.reorderCard(g5.cards[2].id, g5.id, 1);
+		expect(get(s5.store.doc).groups[0].cards.map((c) => c.content)).toEqual(["A", "C", "B"]);
+	});
+
+	it("preserves a single-card named thread when its card is dropped back onto itself", async () => {
+		const initial = "<!-- group: Solo -->\n<!-- card -->\nOnly\n";
+		const { store } = await createStore(initial);
+		const group = get(store.doc).groups[0];
+		const cardId = group.cards[0].id;
+
+		await store.reorderCard(cardId, group.id, 0);
+		await store.reorderCard(cardId, group.id, 1);
+
+		const groups = get(store.doc).groups;
+		expect(groups).toHaveLength(1);
+		expect(groups[0].name).toBe("Solo");
+		expect(groups[0].cards.map((c) => c.content)).toEqual(["Only"]);
+		expect(get(store.historyState).canUndo).toBe(false);
+	});
+});

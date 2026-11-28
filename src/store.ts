@@ -556,23 +556,50 @@ export class JotStore {
 	 * @param targetIndex 移動先グループ内での挿入インデックス位置
 	 */
 	async reorderCard(cardId: string, targetGroupId: string, targetIndex: number) {
+		let moved = false;
 		this.doc.update((current) => {
 			let foundCard: JotCard | null = null;
+			let sourceGroupIndex = -1;
+			let sourceGroupId: string | null = null;
+			let sourceIndex = -1;
 
-			// 移動元グループからカードを取り出す
 			for (let g = 0; g < current.groups.length; g++) {
 				const idx = current.groups[g].cards.findIndex((c) => c.id === cardId);
 				if (idx !== -1) {
-					foundCard = current.groups[g].cards.splice(idx, 1)[0];
-					// 移動元スレッドが空になった場合はグループ削除
-					if (current.groups[g].cards.length === 0 && current.groups[g].name !== "") {
-						current.groups.splice(g, 1);
-					}
+					sourceGroupIndex = g;
+					sourceGroupId = current.groups[g].id;
+					sourceIndex = idx;
 					break;
 				}
 			}
 
-			if (!foundCard) return current;
+			if (sourceGroupIndex === -1) return current;
+
+			// 同一グループ内での下方移動は、移動元カード除去によるインデックス1つ分のずれを補正する
+			const adjustedIndex =
+				sourceGroupId === targetGroupId && targetIndex > sourceIndex
+					? targetIndex - 1
+					: targetIndex;
+
+			// 同一グループ内の同じ位置へのドロップは何もしない
+			if (sourceGroupId === targetGroupId) {
+				const sameGroupClamped = Math.max(
+					0,
+					Math.min(adjustedIndex, current.groups[sourceGroupIndex].cards.length - 1),
+				);
+				if (sameGroupClamped === sourceIndex) return current;
+			}
+
+			// 移動元グループからカードを取り出す
+			foundCard = current.groups[sourceGroupIndex].cards.splice(sourceIndex, 1)[0];
+			// 移動元スレッドが空になった場合はグループ削除（ただし同一スレッド内へのドロップ時は維持）
+			if (
+				current.groups[sourceGroupIndex].cards.length === 0 &&
+				current.groups[sourceGroupIndex].name !== "" &&
+				sourceGroupId !== targetGroupId
+			) {
+				current.groups.splice(sourceGroupIndex, 1);
+			}
 
 			// 移動先グループへ挿入
 			let targetGroup = current.groups.find((g) => g.id === targetGroupId);
@@ -581,7 +608,7 @@ export class JotStore {
 			}
 
 			if (targetGroup) {
-				const clampedIdx = Math.max(0, Math.min(targetIndex, targetGroup.cards.length));
+				const clampedIdx = Math.max(0, Math.min(adjustedIndex, targetGroup.cards.length));
 				targetGroup.cards.splice(clampedIdx, 0, foundCard);
 			} else {
 				current.groups.push({
@@ -592,10 +619,13 @@ export class JotStore {
 			}
 
 			cleanupEmptyUnclassifiedGroups(current);
+			moved = true;
 			return current;
 		});
 
-		await this.save();
+		if (moved) {
+			await this.save();
+		}
 	}
 
 	/**

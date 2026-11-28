@@ -16,12 +16,25 @@
 	 * 4. 複数選択状態とイベントの中継:
 	 *    - 親コンポーネント（App.svelte）から渡された選択状態やイベントハンドラをCardViewへ中継。
 	 */
+	import { onDestroy } from "svelte";
 	import { Notice, Platform, type App } from "obsidian";
 	import type { JotGroup } from "../types";
 	import type { JotStore } from "../store";
 	import { icon } from "../utils/icon";
 	import { t } from "../i18n";
-	import { startDrag, endDrag, getDragSource, isCopyDrop, JOTLINE_DRAG_MIME, type DragSource } from "../dnd";
+	import {
+		startDrag,
+		endDrag,
+		getDragSource,
+		dropPreview,
+		setDropPreview,
+		clearDropPreview,
+		getCardDropSlotIndex,
+		resolveDropPreview,
+		isCopyDrop,
+		JOTLINE_DRAG_MIME,
+		type DragSource,
+	} from "../dnd";
 	import CardView from "./CardView.svelte";
 
 	/** 表示対象のグループデータ */
@@ -45,8 +58,22 @@
 
 	/** スレッドが折りたたまれているかどうかのフラグ */
 	let isCollapsed = false;
-	/** ドラッグオーバー中かどうかのフラグ（枠線ハイライト用） */
-	let isDragOver = false;
+
+	/** このグループに対応する現在のドロップ位置プレビュー */
+	$: groupDropPreview =
+		$dropPreview && $dropPreview.store === store && $dropPreview.groupId === group.id
+			? $dropPreview
+			: null;
+	/** カード挿入プレビュー時の挿入スロット（0 .. group.cards.length、非表示時は null） */
+	$: cardDropIndex = groupDropPreview?.kind === "card" ? groupDropPreview.index : null;
+	/** 別ファイルのスレッドをこのグループの直後に挿入するプレビューかどうか */
+	$: isThreadDropAfter = groupDropPreview?.kind === "thread-after";
+	/** カード受け入れ中のハイライト表示フラグ */
+	$: isDragOver = cardDropIndex !== null;
+
+	onDestroy(() => {
+		clearDropPreview({ store, groupId: group.id });
+	});
 	/** グループ名変更中かどうかのフラグ */
 	let isRenaming = false;
 	/** 変更中のグループ名入力バッファ */
@@ -144,25 +171,74 @@
 
 	/**
 	 * ドラッグオーバー時のハンドラ
-	 * 他のカードがこのグループ上にドラッグされた際にドロップ可能であることを示します。
+	 * 有効なドラッグ対象がこのグループ／カード上に重なった際に、挿入位置プレビューを更新します。
 	 */
-	function handleDragOver(e: DragEvent) {
+	function handleDragOver(e: DragEvent, targetIndex?: number) {
 		// JotLine・エディタ由来のドラッグ（ドラッグセッションがあるもの）だけを受け付ける。
 		// それ以外（カード編集欄の文字のドラッグなど）を受け付けると、ドロップしても何も追加されないのに、
 		// ブラウザ標準の「移動」で元の入力欄から文字が消えてしまうため。
-		if (!getDragSource()) return;
-		e.preventDefault();
-		if (e.dataTransfer) {
-			e.dataTransfer.dropEffect = "move";
+		const source = getDragSource();
+		if (!source) return;
+		if (
+			source.kind !== "editor" &&
+			e.dataTransfer &&
+			!e.dataTransfer.types.includes(JOTLINE_DRAG_MIME)
+		) {
+			clearDropPreview();
+			return;
 		}
-		isDragOver = true;
+		// 同一ビュー内のスレッドドラッグはドロップ不可（何もしない）
+		if (source.kind === "thread" && source.store === store) {
+			clearDropPreview();
+			return;
+		}
+
+		e.preventDefault();
+		const slotIndex = targetIndex !== undefined ? targetIndex : group.cards.length;
+		const preview = resolveDropPreview(source, store, group.id, slotIndex);
+		if (!preview) {
+			// 同一ファイルの別ビュー／エディタ等はドロップ時に通知を出すため preventDefault を維持し、プレビューは消去する
+			clearDropPreview();
+			return;
+		}
+
+		if (e.dataTransfer) {
+			const canCopy = source.kind === "editor" || source.store !== store;
+			e.dataTransfer.dropEffect = canCopy && isCopyDrop(e, Platform.isMacOS) ? "copy" : "move";
+		}
+		setDropPreview(preview);
 	}
 
 	/**
-	 * ドラッグ領域から離れた時のハンドラ
+	 * カード要素上でのドラッグオーバー時に、ポインタの上半分／下半分から挿入スロットを算出してプレビューを更新します。
 	 */
-	function handleDragLeave() {
-		isDragOver = false;
+	function handleCardDragOver(e: DragEvent, cardIndex: number) {
+		e.stopPropagation();
+		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+		const slotIndex = getCardDropSlotIndex(e.clientY, rect, cardIndex);
+		handleDragOver(e, slotIndex);
+	}
+
+	/**
+	 * カード要素上でのドロップ時に、プレビューと同一の算出ロジックで挿入スロットを求めてドロップ処理を実行します。
+	 */
+	async function handleCardDrop(e: DragEvent, cardIndex: number) {
+		e.stopPropagation();
+		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+		const slotIndex = getCardDropSlotIndex(e.clientY, rect, cardIndex);
+		await handleDrop(e, slotIndex);
+	}
+
+	/**
+	 * ドラッグ領域から離れた時のハンドラ（子要素への移動では消去せず、グループ外へ出た時のみ消去）
+	 */
+	function handleDragLeave(e: DragEvent) {
+		const currentTarget = e.currentTarget as HTMLElement | null;
+		const relatedTarget = e.relatedTarget as Node | null;
+		if (currentTarget && relatedTarget && currentTarget.contains(relatedTarget)) {
+			return;
+		}
+		clearDropPreview({ store, groupId: group.id });
 	}
 
 	/**
@@ -179,7 +255,7 @@
 	 */
 	async function handleDrop(e: DragEvent, targetIndex?: number) {
 		e.preventDefault();
-		isDragOver = false;
+		clearDropPreview();
 
 		// targetIndexが指定されていればその位置、なければグループ末尾に挿入
 		const index = targetIndex !== undefined ? targetIndex : group.cards.length;
@@ -188,6 +264,8 @@
 
 		// JotLineのカード・スレッド（古いセッションを誤用しないよう、転送データの種類も確かめる）
 		if (source && source.kind !== "editor" && e.dataTransfer?.types.includes(JOTLINE_DRAG_MIME)) {
+			// グループ間移動や別ファイル移動でドラッグ元要素が DOM から切り離されると dragend が発火しないため、ここで終了する
+			endDrag();
 			if (source.store === store) {
 				if (source.kind === "cards") {
 					await reorderDraggedCard(e, index);
@@ -205,6 +283,7 @@
 		// エディタの選択テキスト（ドロップされたテキストがセッションと一致する場合だけ）
 		if (source && source.kind === "editor") {
 			if (e.dataTransfer?.getData("text/plain") !== source.text) return;
+			endDrag();
 			if (source.filePath === store.file.path) {
 				new Notice(t("NOTICE_DROP_SAME_FILE"));
 				return;
@@ -363,19 +442,21 @@
 	{#if !isCollapsed}
 		<div class="jotline-group-cards">
 			{#each group.cards as card, index (card.id)}
-				<!-- 各カードのドロップ領域ラッパー（カード間の並べ替えを受け付け） -->
+				<!-- 各カードのドロップ領域ラッパー（カード上半分=直前・下半分=直後の並べ替えを受け付け） -->
 				<div
 					class="jotline-card-wrapper"
-					on:dragover={(e) => {
-						e.stopPropagation();
-						handleDragOver(e);
-					}}
-					on:drop={(e) => {
-						e.stopPropagation();
-						handleDrop(e, index);
-					}}
+					on:dragover={(e) => handleCardDragOver(e, index)}
+					on:drop={(e) => handleCardDrop(e, index)}
 					role="listitem"
 				>
+					{#if cardDropIndex === index}
+						<div
+							class="jotline-drop-indicator is-card-before {index === 0 ? 'is-first' : ''}"
+							data-drop-position="before"
+							data-drop-index={index}
+							aria-hidden="true"
+						></div>
+					{/if}
 					<CardView
 						{card}
 						groupId={group.id}
@@ -389,21 +470,53 @@
 						{onContextMenuCard}
 						{getDragCardIds}
 					/>
+					{#if index === group.cards.length - 1 && cardDropIndex === group.cards.length}
+						<div
+							class="jotline-drop-indicator is-card-after"
+							data-drop-position="after"
+							data-drop-index={group.cards.length}
+							aria-hidden="true"
+						></div>
+					{/if}
 				</div>
 			{/each}
 
 			{#if group.cards.length === 0}
 				<!-- カードが0枚の時の空状態プレースホルダー -->
-				<div class="jotline-empty-group">
+				<div class="jotline-empty-group {cardDropIndex === 0 ? 'is-dragover' : ''}">
+					{#if cardDropIndex === 0}
+						<div
+							class="jotline-drop-indicator is-empty-target"
+							data-drop-position="empty"
+							data-drop-index="0"
+							aria-hidden="true"
+						></div>
+					{/if}
 					{t("DROP_CARDS_HERE")}
 				</div>
 			{/if}
 		</div>
+	{:else if cardDropIndex !== null}
+		<div
+			class="jotline-drop-indicator is-collapsed-tail"
+			data-drop-position="collapsed-tail"
+			data-drop-index={cardDropIndex}
+			aria-hidden="true"
+		></div>
+	{/if}
+
+	{#if isThreadDropAfter}
+		<div
+			class="jotline-drop-indicator is-thread-after"
+			data-drop-position="thread-after"
+			aria-hidden="true"
+		></div>
 	{/if}
 </div>
 
 <style>
 	.jotline-group {
+		position: relative;
 		margin-bottom: 16px;
 		border-radius: 8px;
 		transition: background-color 0.15s ease, border-color 0.15s ease;
@@ -513,12 +626,70 @@
 		flex-direction: column;
 	}
 
+	.jotline-card-wrapper {
+		position: relative;
+	}
+
 	.jotline-empty-group {
+		position: relative;
 		padding: 12px;
 		text-align: center;
 		color: var(--text-faint);
 		font-size: 0.85em;
 		border: 1px dashed var(--background-modifier-border);
 		border-radius: 6px;
+		transition: border-color 0.15s ease, background-color 0.15s ease;
+	}
+
+	.jotline-empty-group.is-dragover {
+		border-color: var(--interactive-accent);
+		background-color: var(--background-modifier-hover);
+	}
+
+	.jotline-drop-indicator {
+		position: absolute;
+		left: 0;
+		right: 0;
+		height: 3px;
+		background-color: var(--interactive-accent);
+		border-radius: 2px;
+		pointer-events: none;
+		z-index: 10;
+		box-shadow: 0 0 0 1px var(--background-primary);
+	}
+
+	.jotline-drop-indicator::before {
+		content: "";
+		position: absolute;
+		left: -3px;
+		top: -2px;
+		width: 7px;
+		height: 7px;
+		border-radius: 50%;
+		background-color: var(--interactive-accent);
+	}
+
+	.jotline-drop-indicator.is-card-before {
+		top: -5px;
+	}
+
+	.jotline-drop-indicator.is-card-before.is-first {
+		top: -2px;
+	}
+
+	.jotline-drop-indicator.is-card-after {
+		bottom: 2px;
+	}
+
+	.jotline-drop-indicator.is-empty-target {
+		top: 0;
+	}
+
+	.jotline-drop-indicator.is-collapsed-tail {
+		bottom: -2px;
+	}
+
+	.jotline-drop-indicator.is-thread-after {
+		bottom: -9px;
 	}
 </style>
