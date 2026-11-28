@@ -11,6 +11,7 @@ import { get } from "svelte/store";
 import type { App, TFile } from "obsidian";
 import { __noticeTestState } from "./__mocks__/obsidian";
 import { JotStore } from "./store";
+import { parseJotDocument } from "./parser";
 import type { JotDocument } from "./types";
 
 const FILE = { path: "_jotline.md" } as TFile;
@@ -581,11 +582,16 @@ Card D
 		const { store, fake } = await createStore();
 		const { a, b, c, d, topicId } = ids(store);
 
-		// 末尾の名前付きグループを解散して全カードを削除すると、メモリ末尾だけ空の未分類グループが残る
+		// 末尾の名前付きグループを解散して全カードを削除すると、不要な空の未分類グループは自動除去される
 		expect(await store.dissolveGroup(topicId)).toBe(true);
 		expect(await store.removeCards([c, d])).toBe(true);
-		expect(docOf(store).groups).toHaveLength(2);
-		expect(docOf(store).groups[1].cards).toEqual([]);
+		expect(docOf(store).groups).toHaveLength(1);
+
+		// applyChange の unchanged 分岐を検証するため、メモリ末尾に空の未分類グループを明示注入する
+		store.doc.update((current) => ({
+			...current,
+			groups: [...current.groups, { id: "stray-empty", name: "", cards: [] }],
+		}));
 
 		const savedTextBefore = fake.getContent();
 		fake.vault.modify.mockClear();
@@ -611,5 +617,63 @@ Card D
 		__noticeTestState.reset();
 		expect(await store.ungroupSelectedCards([c])).toBe(true);
 		expect(__noticeTestState.messages).toEqual(["Ungrouped 1 card(s)"]);
+	});
+});
+
+describe("JotStore empty unclassified group cleanup", () => {
+	const shapeOf = (doc: { groups: { name: string; cards: { content: string }[] }[] }) =>
+		doc.groups.map((g) => ({ name: g.name, cards: g.cards.map((c) => c.content) }));
+
+	it("cleans up emptied unclassified groups on deleteCard, deleteMultipleCards, replyToCard, and reorderCard and matches reload", async () => {
+		// deleteCard
+		const s1 = await createStore("<!-- group -->\n<!-- card -->\nU1\n\n<!-- group: Alpha -->\n<!-- card -->\nA1\n");
+		const u1 = docOf(s1.store).groups[0].cards[0].id;
+		await s1.store.deleteCard(u1);
+		expect(shapeOf(docOf(s1.store))).toEqual([{ name: "Alpha", cards: ["A1"] }]);
+		expect(shapeOf(parseJotDocument(s1.fake.getContent()))).toEqual(shapeOf(docOf(s1.store)));
+
+		// deleteMultipleCards
+		const s2 = await createStore("<!-- group -->\n<!-- card -->\nU1\n\n<!-- group: Alpha -->\n<!-- card -->\nA1\n");
+		await s2.store.deleteMultipleCards([docOf(s2.store).groups[0].cards[0].id]);
+		expect(shapeOf(docOf(s2.store))).toEqual([{ name: "Alpha", cards: ["A1"] }]);
+		expect(shapeOf(parseJotDocument(s2.fake.getContent()))).toEqual(shapeOf(docOf(s2.store)));
+
+		// replyToCard on sole unclassified card
+		const s3 = await createStore("<!-- group -->\n<!-- card -->\nU1\n");
+		await s3.store.replyToCard(docOf(s3.store).groups[0].cards[0].id, "Reply");
+		expect(docOf(s3.store).groups).toHaveLength(1);
+		expect(docOf(s3.store).groups[0].name).not.toBe("");
+		expect(docOf(s3.store).groups[0].cards.map((c) => c.content)).toEqual(["U1", "Reply"]);
+		expect(shapeOf(parseJotDocument(s3.fake.getContent()))).toEqual(shapeOf(docOf(s3.store)));
+
+		// reorderCard moving sole unclassified card into named group
+		const s4 = await createStore("<!-- group -->\n<!-- card -->\nU1\n\n<!-- group: Alpha -->\n<!-- card -->\nA1\n");
+		const u4 = docOf(s4.store).groups[0].cards[0].id;
+		const alphaId = docOf(s4.store).groups[1].id;
+		await s4.store.reorderCard(u4, alphaId, 1);
+		expect(shapeOf(docOf(s4.store))).toEqual([{ name: "Alpha", cards: ["A1", "U1"] }]);
+		expect(shapeOf(parseJotDocument(s4.fake.getContent()))).toEqual(shapeOf(docOf(s4.store)));
+
+		// reorderCard dropping sole unclassified card back onto its own group keeps it intact
+		const s5 = await createStore("<!-- group -->\n<!-- card -->\nU1\n");
+		const g5Id = docOf(s5.store).groups[0].id;
+		const u5 = docOf(s5.store).groups[0].cards[0].id;
+		await s5.store.reorderCard(u5, g5Id, 0);
+		expect(shapeOf(docOf(s5.store))).toEqual([{ name: "", cards: ["U1"] }]);
+	});
+
+	it("preserves a single empty unclassified group when deleting the last card in the document", async () => {
+		// From sole named group
+		const s1 = await createStore("<!-- group: Solo -->\n<!-- card -->\nOnly\n");
+		await s1.store.deleteCard(docOf(s1.store).groups[0].cards[0].id);
+		expect(shapeOf(docOf(s1.store))).toEqual([{ name: "", cards: [] }]);
+		expect(shapeOf(parseJotDocument(s1.fake.getContent()))).toEqual([{ name: "", cards: [] }]);
+
+		// From sole unclassified group
+		const s2 = await createStore("<!-- group -->\n<!-- card -->\nOnly\n");
+		const initialGroupId = docOf(s2.store).groups[0].id;
+		await s2.store.deleteCard(docOf(s2.store).groups[0].cards[0].id);
+		expect(shapeOf(docOf(s2.store))).toEqual([{ name: "", cards: [] }]);
+		expect(docOf(s2.store).groups[0].id).toBe(initialGroupId);
 	});
 });
