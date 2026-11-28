@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "aico_version": "0.2.0",
+  "source_repository": "https://gitlab.sasaki819.mydns.jp/open/aico.git",
+  "management_root": "management",
+  "integration_branch": "main",
+  "pr_template": ".gitlab/merge_request_templates/Default.md",
+  "tools": [
+    "claude",
+    "codex",
+    "antigravity"
+  ],
+  "worker_models": {
+    "claude": {
+      "high": {
+        "model": "opus",
+        "effort": "high"
+      },
+      "middle": {
+        "model": "sonnet",
+        "effort": "high"
+      },
+      "low": {
+        "model": "haiku",
+        "effort": "high"
+      }
+    },
+    "codex": {
+      "high": {
+        "model": "gpt-6.2-astra",
+        "effort": "high"
+      },
+      "middle": {
+        "model": "gpt-6.2-sol",
+        "effort": "medium"
+      },
+      "low": {
+        "model": "gpt-6.2-sol",
+        "effort": "low"
+      }
+    },
+    "antigravity": {
+      "high": {
+        "model": "pro",
+        "effort": ""
+      },
+      "middle": {
+        "model": "flash",
+        "effort": ""
+      },
+      "low": {
+        "model": "flash_lite",
+        "effort": ""
+      }
+    },
+    "copilot": {
+      "high": {
+        "model": "",
+        "effort": ""
+      },
+      "middle": {
+        "model": "",
+        "effort": ""
+      },
+      "low": {
+        "model": "",
+        "effort": ""
+      }
+    }
+  }
+}
