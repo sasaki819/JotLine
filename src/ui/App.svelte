@@ -284,27 +284,27 @@
 
 	/**
 	 * 指定したカード群を既存の名前付きグループの末尾へ移動する
-	 * 保存失敗時も選択を解除し、復元で振り直されたIDを選択状態に残さない。
+	 * 移動後も対象カードの選択状態を維持し、保存失敗でモデルが復元された場合のみ存在しないIDを選択から除外する。
 	 */
 	async function handleMoveCardsToGroup(ids: string[], targetGroupId: string) {
 		if (ids.length === 0) return;
 		try {
 			await store.moveCardsToGroup(ids, targetGroupId);
 		} finally {
-			clearSelection();
+			pruneSelection($doc.groups.flatMap((g) => g.cards.map((c) => c.id)));
 		}
 	}
 
 	/**
 	 * 指定したカード群のグループ所属を解除し、ファイル末尾の未分類グループへ移動する
-	 * 保存失敗時も選択を解除し、復元で振り直されたIDを選択状態に残さない。
+	 * 解除後も対象カードの選択状態を維持し、保存失敗でモデルが復元された場合のみ存在しないIDを選択から除外する。
 	 */
 	async function handleUngroupCards(ids: string[]) {
 		if (ids.length === 0) return;
 		try {
 			await store.ungroupSelectedCards(ids);
 		} finally {
-			clearSelection();
+			pruneSelection($doc.groups.flatMap((g) => g.cards.map((c) => c.id)));
 		}
 	}
 
@@ -349,11 +349,11 @@
 	 */
 	function pruneSelection(existingIds: string[]) {
 		const existing = new Set(existingIds);
-		if ([...selectedCardIds].every((id) => existing.has(id))) return;
-		selectedCardIds = new Set([...selectedCardIds].filter((id) => existing.has(id)));
 		if (lastSelectedCardId && !existing.has(lastSelectedCardId)) {
 			lastSelectedCardId = null;
 		}
+		if ([...selectedCardIds].every((id) => existing.has(id))) return;
+		selectedCardIds = new Set([...selectedCardIds].filter((id) => existing.has(id)));
 	}
 
 	/**
