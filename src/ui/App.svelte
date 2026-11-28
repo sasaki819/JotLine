@@ -510,6 +510,7 @@
 				{store}
 				{app}
 				isFirstGroup={groupIndex === 0}
+				isFollowedByDefaultGroup={!group.name && group.cards.length > 0 && Boolean($doc.groups[groupIndex + 1] && !$doc.groups[groupIndex + 1].name && $doc.groups[groupIndex + 1].cards.length > 0)}
 				{selectedCardIds}
 				onSelectCard={handleSelectCard}
 				onContextMenuCard={handleContextMenuCard}

@@ -32,6 +32,8 @@
 	export let app: App;
 	/** ドキュメント全体で最初のグループかどうか（先頭カードのMerge Up可否判定に使用） */
 	export let isFirstGroup = false;
+	/** 直後にカードを持つ未分類グループが連続しているかどうか（連続未分類グループ境界の余白調整に使用） */
+	export let isFollowedByDefaultGroup = false;
 	/** 現在選択中のカードIDセット（複数選択ハイライト用） */
 	export let selectedCardIds: Set<string> = new Set();
 	/** カードクリック（選択・範囲選択）時のコールバック関数 */
@@ -273,7 +275,7 @@
 
 <!-- グループ全体のコンテナ（名前付きスレッドまたはデフォルトグループ） -->
 <div
-	class="jotline-group {group.name ? 'is-thread' : 'is-default'} {isDragOver ? 'is-dragover' : ''} {isCollapsed ? 'is-collapsed' : ''}"
+	class="jotline-group {group.name ? 'is-thread' : 'is-default'} {!group.name && group.cards.length > 0 && isFollowedByDefaultGroup ? 'is-followed-by-default' : ''} {isDragOver ? 'is-dragover' : ''} {isCollapsed ? 'is-collapsed' : ''}"
 	on:dragover={handleDragOver}
 	on:dragleave={handleDragLeave}
 	on:drop={(e) => handleDrop(e)}
@@ -405,6 +407,10 @@
 		margin-bottom: 16px;
 		border-radius: 8px;
 		transition: background-color 0.15s ease, border-color 0.15s ease;
+	}
+
+	.jotline-group.is-default.is-followed-by-default {
+		margin-bottom: 0;
 	}
 
 	.jotline-group.is-thread {
