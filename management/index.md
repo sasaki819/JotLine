@@ -10,7 +10,7 @@
 | :--- | :--- | :--- |
 | 議事録 | active: 0 / closed: 0 | [02.discussions/index.md](02.discussions/index.md) |
 | ADR | accepted: 3 / open: 0 / その他: 0 | [03.adr/index.md](03.adr/index.md) |
-| チケット | active: 5 / closed: 0 | [04.tickets/index.md](04.tickets/index.md) |
+| チケット | active: 4 / closed: 1 | [04.tickets/index.md](04.tickets/index.md) |
 | Runbook | 0件 | [05.runbooks/index.md](05.runbooks/index.md) |
 
 <!-- AICO:AUTO:END:summary -->
@@ -23,7 +23,6 @@
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | [20261124-120014-ticket-keep-selection-after-group-move](04.tickets/20261124-120014-ticket-keep-selection-after-group-move/index.md) | グループ移動直後もカードの選択状態を維持する | open | drafting / working | feature/20261124-120014-ticket-keep-selection-after-group-move | 2026-11-24 12:00:14 |
 | [20261124-120013-ticket-cleanup-empty-unclassified-group](04.tickets/20261124-120013-ticket-cleanup-empty-unclassified-group/index.md) | 空になった不要な未分類グループのドロップ枠を残さない | open | drafting / working | feature/20261124-120013-ticket-cleanup-empty-unclassified-group | 2026-11-24 12:00:13 |
-| [20261124-120012-ticket-unify-unclassified-card-spacing](04.tickets/20261124-120012-ticket-unify-unclassified-card-spacing/index.md) | 連続する未分類グループ間のカード間隔を揃える | open | drafting / working | feature/20261124-120012-ticket-unify-unclassified-card-spacing | 2026-11-24 12:00:12 |
 | [20261104-221111-ticket-preview-card-drop-position](04.tickets/20261104-221111-ticket-preview-card-drop-position/index.md) | ドラッグ中にカードのドロップ先をプレビュー表示する | open | drafting / working | feature/20261104-221111-ticket-preview-card-drop-position | 2026-11-04 22:11:11 |
 | [20261104-221109-ticket-add-card-within-group](04.tickets/20261104-221109-ticket-add-card-within-group/index.md) | グループ内の任意の位置にカードを直接追加する | open | drafting / working | feature/20261104-221109-ticket-add-card-within-group | 2026-11-04 22:11:09 |
 
